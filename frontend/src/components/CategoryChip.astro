@@ -1,0 +1,13 @@
+---
+import { categoryPath, slugByCategory, type Category } from "../lib/amendments";
+
+interface Props {
+  category: Category;
+  link?: boolean;
+}
+const { category, link = true } = Astro.props;
+const slug = slugByCategory[category];
+const cls = "inline-block rounded-md border border-line bg-cyan-50 px-2 py-0.5 text-[11px] font-medium text-navy-800";
+---
+
+{link ? <a href={categoryPath(slug)} class={cls + " hover:border-cyan-600"}>{category}</a> : <span class={cls}>{category}</span>}

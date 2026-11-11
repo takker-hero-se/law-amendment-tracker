@@ -1,0 +1,596 @@
+[
+  {
+    "law_id": "325AC0000000131",
+    "law_num": "昭和二十五年法律第百三十一号",
+    "law_title": "電波法",
+    "law_type": "Act",
+    "egov_category": "電気通信",
+    "category": "情報セキュリティ・IT",
+    "abbrev": null
+  },
+  {
+    "law_id": "325AC0000000132",
+    "law_num": "昭和二十五年法律第百三十二号",
+    "law_title": "放送法",
+    "law_type": "Act",
+    "egov_category": "電気通信",
+    "category": "情報セキュリティ・IT",
+    "abbrev": null
+  },
+  {
+    "law_id": "345AC0000000090",
+    "law_num": "昭和四十五年法律第九十号",
+    "law_title": "情報処理の促進に関する法律",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "情報セキュリティ・IT",
+    "abbrev": "情報処理促進法"
+  },
+  {
+    "law_id": "359AC0000000086",
+    "law_num": "昭和五十九年法律第八十六号",
+    "law_title": "電気通信事業法",
+    "law_type": "Act",
+    "egov_category": "電気通信",
+    "category": "情報セキュリティ・IT",
+    "abbrev": "電通事法"
+  },
+  {
+    "law_id": "411AC0000000128",
+    "law_num": "平成十一年法律第百二十八号",
+    "law_title": "不正アクセス行為の禁止等に関する法律",
+    "law_type": "Act",
+    "egov_category": "警察",
+    "category": "情報セキュリティ・IT",
+    "abbrev": "不正アクセス禁止法"
+  },
+  {
+    "law_id": "412AC0000000102",
+    "law_num": "平成十二年法律第百二号",
+    "law_title": "電子署名及び認証業務に関する法律",
+    "law_type": "Act",
+    "egov_category": "電気通信",
+    "category": "情報セキュリティ・IT",
+    "abbrev": "電子署名法"
+  },
+  {
+    "law_id": "414AC0100000026",
+    "law_num": "平成十四年法律第二十六号",
+    "law_title": "特定電子メールの送信の適正化等に関する法律",
+    "law_type": "Act",
+    "egov_category": "電気通信",
+    "category": "情報セキュリティ・IT",
+    "abbrev": "迷惑メール対策法,特定電子メール送信適正化法"
+  },
+  {
+    "law_id": "415AC0000000057",
+    "law_num": "平成十五年法律第五十七号",
+    "law_title": "個人情報の保護に関する法律",
+    "law_type": "Act",
+    "egov_category": "憲法",
+    "category": "情報セキュリティ・IT",
+    "abbrev": "個人情報保護法"
+  },
+  {
+    "law_id": "419AC0000000022",
+    "law_num": "平成十九年法律第二十二号",
+    "law_title": "犯罪による収益の移転防止に関する法律",
+    "law_type": "Act",
+    "egov_category": "刑事",
+    "category": "情報セキュリティ・IT",
+    "abbrev": "犯罪収益移転防止法,犯収法"
+  },
+  {
+    "law_id": "421AC0000000059",
+    "law_num": "平成二十一年法律第五十九号",
+    "law_title": "資金決済に関する法律",
+    "law_type": "Act",
+    "egov_category": "商業",
+    "category": "情報セキュリティ・IT",
+    "abbrev": "資金決済法"
+  },
+  {
+    "law_id": "425AC0000000027",
+    "law_num": "平成二十五年法律第二十七号",
+    "law_title": "行政手続における特定の個人を識別するための番号の利用等に関する法律",
+    "law_type": "Act",
+    "egov_category": "行政手続",
+    "category": "情報セキュリティ・IT",
+    "abbrev": "マイナンバー法,個人番号法,番号法"
+  },
+  {
+    "law_id": "426AC1000000104",
+    "law_num": "平成二十六年法律第百四号",
+    "law_title": "サイバーセキュリティ基本法",
+    "law_type": "Act",
+    "egov_category": "電気通信",
+    "category": "情報セキュリティ・IT",
+    "abbrev": null
+  },
+  {
+    "law_id": "428AC1000000103",
+    "law_num": "平成二十八年法律第百三号",
+    "law_title": "官民データ活用推進基本法",
+    "law_type": "Act",
+    "egov_category": "電気通信",
+    "category": "情報セキュリティ・IT",
+    "abbrev": null
+  },
+  {
+    "law_id": "502AC0000000038",
+    "law_num": "令和二年法律第三十八号",
+    "law_title": "特定デジタルプラットフォームの透明性及び公正性の向上に関する法律",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "情報セキュリティ・IT",
+    "abbrev": null
+  },
+  {
+    "law_id": "503AC0000000035",
+    "law_num": "令和三年法律第三十五号",
+    "law_title": "デジタル社会形成基本法",
+    "law_type": "Act",
+    "egov_category": "電気通信",
+    "category": "情報セキュリティ・IT",
+    "abbrev": null
+  },
+  {
+    "law_id": "504AC0000000043",
+    "law_num": "令和四年法律第四十三号",
+    "law_title": "経済施策を一体的に講ずることによる安全保障の確保の推進に関する法律",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "情報セキュリティ・IT",
+    "abbrev": null
+  },
+  {
+    "law_id": "506AC0000000027",
+    "law_num": "令和六年法律第二十七号",
+    "law_title": "重要経済安保情報の保護及び活用に関する法律",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "情報セキュリティ・IT",
+    "abbrev": null
+  },
+  {
+    "law_id": "506AC0000000058",
+    "law_num": "令和六年法律第五十八号",
+    "law_title": "スマートフォンにおいて利用される特定ソフトウェアに係る競争の促進に関する法律",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "情報セキュリティ・IT",
+    "abbrev": null
+  },
+  {
+    "law_id": "211AC0000000070",
+    "law_num": "大正十一年法律第七十号",
+    "law_title": "健康保険法",
+    "law_type": "Act",
+    "egov_category": "社会保険",
+    "category": "人事・労務",
+    "abbrev": "健保法"
+  },
+  {
+    "law_id": "322AC0000000049",
+    "law_num": "昭和二十二年法律第四十九号",
+    "law_title": "労働基準法",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "労基法"
+  },
+  {
+    "law_id": "322AC0000000050",
+    "law_num": "昭和二十二年法律第五十号",
+    "law_title": "労働者災害補償保険法",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "労災法,労災保険法"
+  },
+  {
+    "law_id": "329AC0000000115",
+    "law_num": "昭和二十九年法律第百十五号",
+    "law_title": "厚生年金保険法",
+    "law_type": "Act",
+    "egov_category": "社会保険",
+    "category": "人事・労務",
+    "abbrev": "厚生年金法"
+  },
+  {
+    "law_id": "334AC0000000137",
+    "law_num": "昭和三十四年法律第百三十七号",
+    "law_title": "最低賃金法",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "最賃法"
+  },
+  {
+    "law_id": "335AC0000000123",
+    "law_num": "昭和三十五年法律第百二十三号",
+    "law_title": "障害者の雇用の促進等に関する法律",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "障害者雇用促進法"
+  },
+  {
+    "law_id": "341AC0000000132",
+    "law_num": "昭和四十一年法律第百三十二号",
+    "law_title": "労働施策の総合的な推進並びに労働者の雇用の安定及び職業生活の充実等に関する法律",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "雇対法,労働施策総合推進法"
+  },
+  {
+    "law_id": "346AC0000000068",
+    "law_num": "昭和四十六年法律第六十八号",
+    "law_title": "高年齢者等の雇用の安定等に関する法律",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "高年齢者雇用安定法"
+  },
+  {
+    "law_id": "347AC0000000057",
+    "law_num": "昭和四十七年法律第五十七号",
+    "law_title": "労働安全衛生法",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "労安衛法,安衛法,保安四法"
+  },
+  {
+    "law_id": "347AC0000000113",
+    "law_num": "昭和四十七年法律第百十三号",
+    "law_title": "雇用の分野における男女の均等な機会及び待遇の確保等に関する法律",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "男女雇用機会均等法"
+  },
+  {
+    "law_id": "349AC0000000116",
+    "law_num": "昭和四十九年法律第百十六号",
+    "law_title": "雇用保険法",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": null
+  },
+  {
+    "law_id": "360AC0000000088",
+    "law_num": "昭和六十年法律第八十八号",
+    "law_title": "労働者派遣事業の適正な運営の確保及び派遣労働者の保護等に関する法律",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "労働者派遣法,人材派遣法"
+  },
+  {
+    "law_id": "403AC0000000076",
+    "law_num": "平成三年法律第七十六号",
+    "law_title": "育児休業、介護休業等育児又は家族介護を行う労働者の福祉に関する法律",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "育児・介護休業法,育児介護休業法"
+  },
+  {
+    "law_id": "405AC0000000076",
+    "law_num": "平成五年法律第七十六号",
+    "law_title": "短時間労働者及び有期雇用労働者の雇用管理の改善等に関する法律",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "パートタイム法,パート労働法"
+  },
+  {
+    "law_id": "419AC0000000128",
+    "law_num": "平成十九年法律第百二十八号",
+    "law_title": "労働契約法",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "労契法"
+  },
+  {
+    "law_id": "427AC0000000064",
+    "law_num": "平成二十七年法律第六十四号",
+    "law_title": "女性の職業生活における活躍の推進に関する法律",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "人事・労務",
+    "abbrev": "女性活躍推進法"
+  },
+  {
+    "law_id": "325AC0000000073",
+    "law_num": "昭和二十五年法律第七十三号",
+    "law_title": "相続税法",
+    "law_type": "Act",
+    "egov_category": "国税",
+    "category": "税務・会計",
+    "abbrev": null
+  },
+  {
+    "law_id": "325AC0000000226",
+    "law_num": "昭和二十五年法律第二百二十六号",
+    "law_title": "地方税法",
+    "law_type": "Act",
+    "egov_category": "地方財政",
+    "category": "税務・会計",
+    "abbrev": null
+  },
+  {
+    "law_id": "332AC0000000026",
+    "law_num": "昭和三十二年法律第二十六号",
+    "law_title": "租税特別措置法",
+    "law_type": "Act",
+    "egov_category": "国税",
+    "category": "税務・会計",
+    "abbrev": "租特法"
+  },
+  {
+    "law_id": "334AC0000000147",
+    "law_num": "昭和三十四年法律第百四十七号",
+    "law_title": "国税徴収法",
+    "law_type": "Act",
+    "egov_category": "国税",
+    "category": "税務・会計",
+    "abbrev": null
+  },
+  {
+    "law_id": "337AC0000000066",
+    "law_num": "昭和三十七年法律第六十六号",
+    "law_title": "国税通則法",
+    "law_type": "Act",
+    "egov_category": "国税",
+    "category": "税務・会計",
+    "abbrev": null
+  },
+  {
+    "law_id": "340AC0000000033",
+    "law_num": "昭和四十年法律第三十三号",
+    "law_title": "所得税法",
+    "law_type": "Act",
+    "egov_category": "国税",
+    "category": "税務・会計",
+    "abbrev": null
+  },
+  {
+    "law_id": "340AC0000000034",
+    "law_num": "昭和四十年法律第三十四号",
+    "law_title": "法人税法",
+    "law_type": "Act",
+    "egov_category": "国税",
+    "category": "税務・会計",
+    "abbrev": null
+  },
+  {
+    "law_id": "342AC0000000023",
+    "law_num": "昭和四十二年法律第二十三号",
+    "law_title": "印紙税法",
+    "law_type": "Act",
+    "egov_category": "国税",
+    "category": "税務・会計",
+    "abbrev": null
+  },
+  {
+    "law_id": "363AC0000000108",
+    "law_num": "昭和六十三年法律第百八号",
+    "law_title": "消費税法",
+    "law_type": "Act",
+    "egov_category": "国税",
+    "category": "税務・会計",
+    "abbrev": null
+  },
+  {
+    "law_id": "410AC0000000025",
+    "law_num": "平成十年法律第二十五号",
+    "law_title": "電子計算機を使用して作成する国税関係帳簿書類の保存方法等の特例に関する法律",
+    "law_type": "Act",
+    "egov_category": "国税",
+    "category": "税務・会計",
+    "abbrev": "電子帳簿保存法"
+  },
+  {
+    "law_id": "129AC0000000089",
+    "law_num": "明治二十九年法律第八十九号",
+    "law_title": "民法",
+    "law_type": "Act",
+    "egov_category": "民事",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": null
+  },
+  {
+    "law_id": "140AC0000000045",
+    "law_num": "明治四十年法律第四十五号",
+    "law_title": "刑法",
+    "law_type": "Act",
+    "egov_category": "刑事",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": null
+  },
+  {
+    "law_id": "322AC0000000054",
+    "law_num": "昭和二十二年法律第五十四号",
+    "law_title": "昭和二十二年法律第五十四号（私的独占の禁止及び公正取引の確保に関する法律）",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": "独禁法,独占禁止法"
+  },
+  {
+    "law_id": "323AC0000000025",
+    "law_num": "昭和二十三年法律第二十五号",
+    "law_title": "金融商品取引法",
+    "law_type": "Act",
+    "egov_category": "金融・保険",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": "金商法,証取法"
+  },
+  {
+    "law_id": "324AC0000000228",
+    "law_num": "昭和二十四年法律第二百二十八号",
+    "law_title": "外国為替及び外国貿易法",
+    "law_type": "Act",
+    "egov_category": "外国為替・貿易",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": "外為法,外国為替法"
+  },
+  {
+    "law_id": "331AC0000000120",
+    "law_num": "昭和三十一年法律第百二十号",
+    "law_title": "製造委託等に係る中小受託事業者に対する代金の支払の遅延等の防止に関する法律",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": "取適法,中小受託取引適正化法"
+  },
+  {
+    "law_id": "336AC0000000159",
+    "law_num": "昭和三十六年法律第百五十九号",
+    "law_title": "割賦販売法",
+    "law_type": "Act",
+    "egov_category": "商業",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": "割販法"
+  },
+  {
+    "law_id": "337AC0000000134",
+    "law_num": "昭和三十七年法律第百三十四号",
+    "law_title": "不当景品類及び不当表示防止法",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": "景表法,景品表示法"
+  },
+  {
+    "law_id": "351AC0000000057",
+    "law_num": "昭和五十一年法律第五十七号",
+    "law_title": "特定商取引に関する法律",
+    "law_type": "Act",
+    "egov_category": "商業",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": "特定商取引法,訪問販売、通信販売、マルチ販売等法,訪販、通販、マルチ等法"
+  },
+  {
+    "law_id": "405AC0000000047",
+    "law_num": "平成五年法律第四十七号",
+    "law_title": "不正競争防止法",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": "不競法"
+  },
+  {
+    "law_id": "406AC0000000085",
+    "law_num": "平成六年法律第八十五号",
+    "law_title": "製造物責任法",
+    "law_type": "Act",
+    "egov_category": "民事",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": "ＰＬ法"
+  },
+  {
+    "law_id": "408AC0000000109",
+    "law_num": "平成八年法律第百九号",
+    "law_title": "民事訴訟法",
+    "law_type": "Act",
+    "egov_category": "民事",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": "民訴法"
+  },
+  {
+    "law_id": "412AC0000000061",
+    "law_num": "平成十二年法律第六十一号",
+    "law_title": "消費者契約法",
+    "law_type": "Act",
+    "egov_category": "商業",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": null
+  },
+  {
+    "law_id": "416AC0000000122",
+    "law_num": "平成十六年法律第百二十二号",
+    "law_title": "公益通報者保護法",
+    "law_type": "Act",
+    "egov_category": "労働",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": null
+  },
+  {
+    "law_id": "417AC0000000086",
+    "law_num": "平成十七年法律第八十六号",
+    "law_title": "会社法",
+    "law_type": "Act",
+    "egov_category": "民事",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": null
+  },
+  {
+    "law_id": "418M60000010013",
+    "law_num": "平成十八年法務省令第十三号",
+    "law_title": "会社計算規則",
+    "law_type": "MinisterialOrdinance",
+    "egov_category": "民事",
+    "category": "企業法務・コンプライアンス",
+    "abbrev": null
+  },
+  {
+    "law_id": "334AC0000000121",
+    "law_num": "昭和三十四年法律第百二十一号",
+    "law_title": "特許法",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "知財",
+    "abbrev": null
+  },
+  {
+    "law_id": "334AC0000000123",
+    "law_num": "昭和三十四年法律第百二十三号",
+    "law_title": "実用新案法",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "知財",
+    "abbrev": null
+  },
+  {
+    "law_id": "334AC0000000125",
+    "law_num": "昭和三十四年法律第百二十五号",
+    "law_title": "意匠法",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "知財",
+    "abbrev": null
+  },
+  {
+    "law_id": "334AC0000000127",
+    "law_num": "昭和三十四年法律第百二十七号",
+    "law_title": "商標法",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "知財",
+    "abbrev": null
+  },
+  {
+    "law_id": "345AC0000000048",
+    "law_num": "昭和四十五年法律第四十八号",
+    "law_title": "著作権法",
+    "law_type": "Act",
+    "egov_category": "文化",
+    "category": "知財",
+    "abbrev": null
+  },
+  {
+    "law_id": "360AC0000000043",
+    "law_num": "昭和六十年法律第四十三号",
+    "law_title": "半導体集積回路の回路配置に関する法律",
+    "law_type": "Act",
+    "egov_category": "産業通則",
+    "category": "知財",
+    "abbrev": "半導体集積回路法,半導体チップ法,回路配置法"
+  }
+]

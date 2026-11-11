@@ -1,0 +1,13 @@
+"""パイプライン共通の例外。外部ソースの失敗は必ずこの型に変換する（握りつぶさない）。"""
+
+
+class PipelineError(Exception):
+    """パイプライン内で回復不能な失敗。"""
+
+
+class SourceError(PipelineError):
+    """差分取得元（e-Gov API / Git ミラー）の失敗。"""
+
+
+class SummarizerError(PipelineError):
+    """LLM 要約の失敗（スキーマ不一致・API エラー）。"""

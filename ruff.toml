@@ -1,0 +1,21 @@
+# Lint gate (CLAUDE.md §3). `ruff check .` must be clean; run `ruff check --fix .` for the mechanical ones.
+target-version = "py311"
+line-length = 160
+extend-exclude = ["frontend", "data"]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4", "RUF", "PIE", "T20"]
+ignore = [
+  "E501",
+  "RUF001", "RUF002", "RUF003",  # Japanese punctuation in strings/docstrings is intentional
+  "SIM108",
+  "UP007",
+  "RUF012",
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["T20", "B011", "SIM117", "RUF018", "E731", "C408"]
+"pipeline/run.py" = ["T20"]
+
+[lint.isort]
+known-first-party = ["pipeline", "tests"]

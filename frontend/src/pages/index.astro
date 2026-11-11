@@ -1,0 +1,82 @@
+---
+import { getCollection } from "astro:content";
+import { ArrowRight, AlertTriangle } from "lucide-astro";
+import Base from "../layouts/Base.astro";
+import AmendmentCard from "../components/AmendmentCard.astro";
+import FilterBar from "../components/FilterBar.astro";
+import { byPromulgationDesc, byEnforcementAsc, IMPACT_ORDER, SITE_TAGLINE, amendmentPath, formatDate } from "../lib/amendments";
+
+const all = (await getCollection("amendments")).sort(byPromulgationDesc);
+const today = new Date().toISOString().slice(0, 10);
+const highImpact = all.filter((e) => e.data.impact_level === "High").slice(0, 6);
+const upcoming = all
+  .filter((e) => e.data.enforcement_date && e.data.enforcement_date >= today)
+  .sort(byEnforcementAsc)
+  .slice(0, 6);
+const sorted = [...all].sort((a, b) => IMPACT_ORDER[a.data.impact_level] - IMPACT_ORDER[b.data.impact_level] || byPromulgationDesc(a, b));
+const latestGenerated = all.map((e) => e.data.generated_at).sort().at(-1) ?? "-";
+---
+
+<Base>
+  <section class="rounded-xl bg-navy-900 px-6 py-8 text-white">
+    <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">法改正を、差分で追う。</h1>
+    <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-200">{SITE_TAGLINE}</p>
+    <dl class="mt-5 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+      <div class="rounded-lg bg-navy-800 p-3"><dt class="text-xs text-slate-300">収録改正</dt><dd class="text-xl font-bold">{all.length} <span class="text-xs font-normal">件</span></dd></div>
+      <div class="rounded-lg bg-navy-800 p-3"><dt class="text-xs text-slate-300">影響 大</dt><dd class="text-xl font-bold text-red-300">{all.filter((e) => e.data.impact_level === "High").length} <span class="text-xs font-normal">件</span></dd></div>
+      <div class="rounded-lg bg-navy-800 p-3"><dt class="text-xs text-slate-300">未施行</dt><dd class="text-xl font-bold text-cyan-300">{all.filter((e) => e.data.enforcement_status === "UnEnforced").length} <span class="text-xs font-normal">件</span></dd></div>
+      <div class="rounded-lg bg-navy-800 p-3"><dt class="text-xs text-slate-300">最終更新</dt><dd class="text-sm font-semibold">{latestGenerated.slice(0, 10)}</dd></div>
+    </dl>
+  </section>
+
+  {
+    upcoming.length > 0 && (
+      <section class="mt-8">
+        <div class="flex items-baseline justify-between">
+          <h2 class="text-lg font-bold">直近で施行される改正</h2>
+          <a href="/timeline/" class="flex items-center gap-1 text-sm text-cyan-600 hover:underline">
+            タイムラインへ <ArrowRight size={14} />
+          </a>
+        </div>
+        <ol class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {upcoming.map((e) => (
+            <li class="rounded-lg border border-line bg-white p-3 text-sm">
+              <div class="text-xs font-semibold text-cyan-600">{formatDate(e.data.enforcement_date)} 施行</div>
+              <a href={amendmentPath(e)} class="mt-1 block font-bold leading-snug hover:text-cyan-600">
+                {e.data.title}
+              </a>
+              <div class="mt-1 text-xs text-muted">{e.data.amending_law_title ?? e.data.amendment_type}</div>
+            </li>
+          ))}
+        </ol>
+      </section>
+    )
+  }
+
+  {
+    highImpact.length > 0 && (
+      <section class="mt-8">
+        <h2 class="flex items-center gap-2 text-lg font-bold">
+          <AlertTriangle size={18} class="text-impact-high" />
+          実務影響の大きい改正
+        </h2>
+        <div class="mt-3 grid gap-3 md:grid-cols-2">
+          {highImpact.map((e) => (
+            <AmendmentCard entry={e} compact />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <section class="mt-10">
+    <h2 class="text-lg font-bold">すべての改正</h2>
+    <p class="mt-1 text-sm text-muted">影響度の高い順、同順位では公布日の新しい順。分野・影響度・施行状態・キーワードで絞り込める。</p>
+    <div class="mt-3"><FilterBar total={all.length} /></div>
+    <div class="mt-4 grid gap-3 md:grid-cols-2" id="list">
+      {sorted.map((e) => <AmendmentCard entry={e} />)}
+    </div>
+    <p data-empty hidden class="mt-6 rounded-lg border border-dashed border-line bg-white p-6 text-center text-sm text-muted">条件に一致する改正はない。</p>
+    {all.length === 0 && <p class="mt-6 rounded-lg border border-dashed border-line bg-white p-6 text-center text-sm text-muted">まだ改正データがない。`python -m pipeline.run --since YYYY-MM-DD` を実行して生成する。</p>}
+  </section>
+</Base>

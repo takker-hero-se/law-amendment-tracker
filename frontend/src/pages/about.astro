@@ -1,0 +1,32 @@
+---
+import Base from "../layouts/Base.astro";
+import { SITE_NAME } from "../lib/amendments";
+---
+
+<Base title="このサイトについて">
+  <article class="prose-law mx-auto max-w-3xl rounded-xl border border-line bg-white p-6">
+    <h1 class="text-2xl font-bold">このサイトについて</h1>
+    <p>{SITE_NAME} は、日本の法令データの更新差分を自動検知し、分野分類・実務影響度・3 行要旨を付けて配信するオープンソースの法改正ウォッチである。</p>
+
+    <h2>仕組み</h2>
+    <ol>
+      <li><b>差分検知</b>: e-Gov 法令 API v2 で監視対象法令の改正履歴を毎日取得し、前回のスナップショットと比べて新しい履歴を見つける。各履歴の本文を条・項・号ごとに平文化し、直前の版との unified diff を取る。</li>
+      <li><b>ノイズ除去</b>: 本文に差分がない更新、変更文字数・行数が閾値未満の微修正、条番号の機械的な繰り下げだけの変更を除外する。新設・廃止は常に残す。</li>
+      <li><b>LLM 要約</b>: 新旧対照を LLM に渡し、分野タグ・影響度・対象・3 行要旨・解説を JSON スキーマで厳密に検証して得る。LLM を使わない場合は差分の計測値だけから暫定値を付ける（provider=template）。</li>
+      <li><b>配信</b>: frontmatter 付き Markdown を Astro の Content Collections で静的サイトにし、RSS / JSON Feed を分野別に出す。</li>
+    </ol>
+
+    <h2>影響度の目安</h2>
+    <ul>
+      <li><b>High</b>: 多くの事業者に新たな義務・罰則・システム改修が生じる</li>
+      <li><b>Medium</b>: 一部の事業者や手続に影響</li>
+      <li><b>Low</b>: 用語整理・軽微な手続変更</li>
+    </ul>
+
+    <h2>注意</h2>
+    <p>要旨・影響度・分野は機械生成であり、法的助言ではない。法令データは e-Gov 法令検索の提供範囲に限られ、官報の掲載内容と異なる場合は官報が優先する。施行日は e-Gov が付与する「擬似的な施行期日」を含むため、政令委任の場合は附則を確認されたい。</p>
+
+    <h2>データ出典</h2>
+    <p><a href="https://laws.e-gov.go.jp/" rel="noopener">e-Gov 法令検索（デジタル庁）</a> 法令 API Version 2。API は認証不要の公開 API である。</p>
+  </article>
+</Base>

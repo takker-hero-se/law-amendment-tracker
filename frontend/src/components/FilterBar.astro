@@ -1,0 +1,98 @@
+---
+/**
+ * カテゴリ・影響度・施行状態・全文検索のクライアント側フィルタ。
+ * `.amendment-card` の data-* 属性を読んで表示/非表示を切り替える。
+ */
+import { Search, Filter } from "lucide-astro";
+import { CATEGORIES } from "../content.config";
+import { slugByCategory } from "../lib/amendments";
+
+interface Props {
+  fixedCategory?: string;
+  total: number;
+}
+const { fixedCategory, total } = Astro.props;
+---
+
+<section class="rounded-lg border border-line bg-white p-3 shadow-sm" id="filter-bar">
+  <div class="flex flex-wrap items-center gap-2">
+    <label class="relative flex-1 basis-60">
+      <Search size={16} class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
+      <input id="q" type="search" placeholder="法令名・改正法・要旨で検索" class="w-full rounded-md border border-line py-1.5 pl-8 pr-3 text-sm focus:border-cyan-600 focus:outline-none" autocomplete="off" />
+    </label>
+    <select id="impact" class="rounded-md border border-line px-2 py-1.5 text-sm">
+      <option value="">影響度: すべて</option>
+      <option value="High">影響 大</option>
+      <option value="Medium">影響 中</option>
+      <option value="Low">影響 小</option>
+    </select>
+    <select id="status" class="rounded-md border border-line px-2 py-1.5 text-sm">
+      <option value="">施行状態: すべて</option>
+      <option value="UnEnforced">未施行</option>
+      <option value="CurrentEnforced">施行済</option>
+      <option value="Repeal">廃止</option>
+    </select>
+    <span class="ml-auto flex items-center gap-1 text-xs text-muted"><Filter size={14} />表示中 <b id="shown" class="text-ink">{total}</b> / {total} 件</span>
+  </div>
+  {
+    !fixedCategory && (
+      <div class="mt-2 flex flex-wrap gap-1.5" id="cats">
+        <button type="button" data-cat="" class="cat-btn is-on rounded-md border border-line px-2.5 py-1 text-xs">
+          すべて
+        </button>
+        {CATEGORIES.map((c) => (
+          <button type="button" data-cat={slugByCategory[c]} class="cat-btn rounded-md border border-line px-2.5 py-1 text-xs">
+            {c}
+          </button>
+        ))}
+      </div>
+    )
+  }
+</section>
+
+<style>
+  .cat-btn.is-on {
+    background: var(--color-navy-900);
+    color: #fff;
+    border-color: var(--color-navy-900);
+  }
+</style>
+
+<script>
+  const q = document.getElementById("q") as HTMLInputElement | null;
+  const impact = document.getElementById("impact") as HTMLSelectElement | null;
+  const status = document.getElementById("status") as HTMLSelectElement | null;
+  const shown = document.getElementById("shown");
+  const cards = Array.from(document.querySelectorAll<HTMLElement>(".amendment-card"));
+  let cat = "";
+
+  function apply() {
+    const needle = (q?.value ?? "").trim().toLowerCase();
+    let n = 0;
+    for (const card of cards) {
+      const ok =
+        (!cat || (card.dataset.categories ?? "").split(" ").includes(cat)) &&
+        (!impact?.value || card.dataset.impact === impact.value) &&
+        (!status?.value || card.dataset.status === status.value) &&
+        (!needle || (card.dataset.search ?? "").includes(needle));
+      card.hidden = !ok;
+      if (ok) n++;
+    }
+    if (shown) shown.textContent = String(n);
+    document.querySelectorAll<HTMLElement>("[data-empty]").forEach((el) => (el.hidden = n > 0));
+  }
+
+  q?.addEventListener("input", apply);
+  impact?.addEventListener("change", apply);
+  status?.addEventListener("change", apply);
+  document.querySelectorAll<HTMLButtonElement>(".cat-btn").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      cat = btn.dataset.cat ?? "";
+      document.querySelectorAll(".cat-btn").forEach((b) => b.classList.toggle("is-on", b === btn));
+      apply();
+    }),
+  );
+  const params = new URLSearchParams(location.search);
+  if (params.get("q") && q) q.value = params.get("q") ?? "";
+  apply();
+</script>

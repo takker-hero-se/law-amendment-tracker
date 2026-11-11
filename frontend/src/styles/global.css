@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "BIZ UDPGothic", "Noto Sans JP", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-navy-950: #071a2c;
+  --color-navy-900: #0b2236;
+  --color-navy-800: #102f4a;
+  --color-navy-700: #16405f;
+  --color-cyan-500: #0a9fd8;
+  --color-cyan-600: #0077b6;
+  --color-cyan-50: #e6f4fd;
+  --color-ink: #0b2236;
+  --color-muted: #4f6275;
+  --color-line: #d7e6f4;
+  --color-paper: #f3f8fd;
+
+  --color-impact-high: #c0392b;
+  --color-impact-medium: #d98c0b;
+  --color-impact-low: #2e8b57;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-paper text-ink font-sans antialiased;
+  font-feature-settings: "palt";
+}
+
+.prose-law h2 {
+  @apply mt-8 mb-3 text-lg font-bold text-navy-900 border-l-4 border-cyan-600 pl-3;
+}
+.prose-law p {
+  @apply my-3 leading-relaxed;
+}
+.prose-law ul {
+  @apply my-3 list-disc pl-6;
+}
+.prose-law code {
+  @apply font-mono text-[0.85em] bg-cyan-50 px-1 py-0.5 rounded;
+}
+.prose-law pre {
+  @apply my-4 overflow-x-auto rounded-lg border border-line bg-white p-4 text-[12.5px] leading-relaxed;
+}
+.prose-law pre code {
+  @apply bg-transparent p-0;
+}
+/* 差分の着色（Shiki の diff 言語でなく素の行頭記号で着色する） */
+.prose-law pre.language-diff .line,
+.diff-view .line {
+  display: block;
+}
+.diff-add {
+  @apply bg-green-50 text-green-900;
+}
+.diff-del {
+  @apply bg-red-50 text-red-900;
+}
+.diff-meta {
+  @apply text-muted;
+}

@@ -1,0 +1,44 @@
+---
+import { getCollection } from "astro:content";
+import { Rss } from "lucide-astro";
+import Base from "../../../layouts/Base.astro";
+import AmendmentCard from "../../../components/AmendmentCard.astro";
+import FilterBar from "../../../components/FilterBar.astro";
+import { CATEGORY_SLUGS } from "../../../content.config";
+import { byPromulgationDesc, categoryBySlug, IMPACT_ORDER, type CategorySlug } from "../../../lib/amendments";
+
+export async function getStaticPaths() {
+  return CATEGORY_SLUGS.map((cat) => ({ params: { cat } }));
+}
+
+const cat = Astro.params.cat as CategorySlug;
+const category = categoryBySlug[cat];
+const entries = (await getCollection("amendments", (e) => e.data.category_slugs.includes(cat))).sort(
+  (a, b) => IMPACT_ORDER[a.data.impact_level] - IMPACT_ORDER[b.data.impact_level] || byPromulgationDesc(a, b),
+);
+---
+
+<Base title={`${category} の法改正`} description={`${category} 分野の法改正一覧。影響度・施行日つき。`}>
+  <div class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <p class="text-xs text-muted">分野別一覧</p>
+      <h1 class="text-2xl font-bold">{category}</h1>
+    </div>
+    <a href={`/category/${cat}/rss.xml`} class="flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs hover:border-cyan-600"><Rss size={14} />この分野の RSS</a>
+  </div>
+  <nav class="mt-3 flex flex-wrap gap-1.5 text-xs">
+    {
+      CATEGORY_SLUGS.map((s) => (
+        <a href={`/category/${s}/`} class:list={["rounded-md border px-2.5 py-1", s === cat ? "border-navy-900 bg-navy-900 text-white" : "border-line bg-white hover:border-cyan-600"]}>
+          {categoryBySlug[s]}
+        </a>
+      ))
+    }
+  </nav>
+  <div class="mt-4"><FilterBar total={entries.length} fixedCategory={cat} /></div>
+  <div class="mt-4 grid gap-3 md:grid-cols-2">
+    {entries.map((e) => <AmendmentCard entry={e} />)}
+  </div>
+  <p data-empty hidden class="mt-6 rounded-lg border border-dashed border-line bg-white p-6 text-center text-sm text-muted">条件に一致する改正はない。</p>
+  {entries.length === 0 && <p class="mt-6 rounded-lg border border-dashed border-line bg-white p-6 text-center text-sm text-muted">この分野の改正はまだ収録されていない。</p>}
+</Base>

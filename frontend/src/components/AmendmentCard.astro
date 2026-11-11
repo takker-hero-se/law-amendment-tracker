@@ -1,0 +1,52 @@
+---
+import { CalendarDays, Clock } from "lucide-astro";
+import ImpactBadge from "./ImpactBadge.astro";
+import CategoryChip from "./CategoryChip.astro";
+import { amendmentPath, formatDate, STATUS_LABEL, type Amendment } from "../lib/amendments";
+
+interface Props {
+  entry: Amendment;
+  compact?: boolean;
+}
+const { entry, compact = false } = Astro.props;
+const d = entry.data;
+const statusTone = d.enforcement_status === "UnEnforced" ? "text-cyan-600" : d.enforcement_status === "Repeal" ? "text-impact-high" : "text-muted";
+---
+
+<article
+  class="amendment-card rounded-lg border border-line bg-white p-4 shadow-sm transition hover:border-cyan-600"
+  data-categories={d.category_slugs.join(" ")}
+  data-impact={d.impact_level}
+  data-status={d.enforcement_status}
+  data-type={d.amendment_type}
+  data-search={`${d.title} ${d.law_num} ${d.amending_law_title ?? ""} ${d.summary_points.join(" ")}`.toLowerCase()}
+>
+  <div class="flex flex-wrap items-center gap-2">
+    <ImpactBadge level={d.impact_level} />
+    <span class="rounded-md bg-navy-900 px-2 py-0.5 text-[11px] font-semibold text-white">{d.amendment_type}</span>
+    {d.categories.map((c) => <CategoryChip category={c} />)}
+    <span class={`ml-auto text-[11px] font-medium ${statusTone}`}>{STATUS_LABEL[d.enforcement_status]}</span>
+  </div>
+  <h3 class="mt-2 text-base font-bold leading-snug">
+    <a href={amendmentPath(entry)} class="hover:text-cyan-600">{d.title}</a>
+    <span class="ml-1 text-xs font-normal text-muted">{d.law_num}</span>
+  </h3>
+  {d.amending_law_title && <p class="mt-0.5 text-xs text-muted">改正法: {d.amending_law_title}{d.amending_law_num ? `（${d.amending_law_num}）` : ""}</p>}
+  {
+    !compact && (
+      <ul class="mt-2 space-y-1 text-sm leading-relaxed">
+        {d.summary_points.map((p) => (
+          <li class="flex gap-2">
+            <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-600" />
+            <span>{p}</span>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  <dl class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted">
+    <div class="flex items-center gap-1"><CalendarDays size={14} /><dt>公布</dt><dd class="font-medium text-ink">{formatDate(d.promulgation_date)}</dd></div>
+    <div class="flex items-center gap-1"><Clock size={14} /><dt>施行</dt><dd class="font-medium text-ink">{d.enforcement_date ? formatDate(d.enforcement_date) : d.enforcement_note}</dd></div>
+    <div class="ml-auto font-mono text-[11px]">+{d.stats.added_lines} / -{d.stats.removed_lines} 行</div>
+  </dl>
+</article>
