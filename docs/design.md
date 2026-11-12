@@ -45,13 +45,14 @@ Git ミラー（houritsu 形式）は `GitSource` で前回コミットと HEAD 
 | 条番号・数字・空白・句読点を潰すと同一 | 落とす（繰り下げのみ） |
 | 新設・廃止 | 常に残す |
 
-2026-11-12 の実行（監視リスト 66 法令、2025-04-01 以降、上限 80 件）では 80 件検知 → 14 件除外 → 66 件生成。
+2026-11-12 の実行（監視リスト 66 法令、2025-04-01 以降、上限なし）では 313 件検知 → 30 件除外 → 283 件生成（Anthropic `claude-haiku-5-5`、スキーマ再試行 0、失敗 0）。
 
 ## LLM 要約（`summarizer.py`）
 
 - 入力は `differ.format_for_llm()` が作る新旧対照（変更ブロックごとに直前・直後 1 行の文脈、`LAWTRACK_LLM_INPUT_MAX_CHARS` で打ち切り）。
 - システム文は固定（プロンプトキャッシュが効く）。ユーザー文にメタデータと新旧対照を入れる。
 - Anthropic は `client.messages.parse(output_format=Summary)`、Gemini は `response_json_schema`。どちらも最終的に `Summary.model_validate_json` を通す。
+- 構造化出力でも `max_length` 等の制約は API 側で強制されない。SDK の `parse` が投げる pydantic の例外は `SchemaMismatch` に変換して同じ再試行に乗せる（2026-11-12 に `target_audience` 6 件で実行が止まった不具合の対処）。
 - `template` は LLM を使わず、e-Gov の分野分類 → 本サイトの分野のマッピングと差分行数だけで暫定値を付ける。本文に「LLM 要約を生成していない」と明記する。
 
 ## フロントエンド
