@@ -66,6 +66,7 @@ cd frontend; npm run build; npm run preview
 
 主な設定は `.env.example` を参照。`LAWTRACK_LLM_PROVIDER=anthropic` と `ANTHROPIC_API_KEY`（または `gemini` と `GEMINI_API_KEY`）で LLM 要約が有効になる。
 既定モデルは `claude-haiku-5-5` / `gemini-2.5-flash`。
+リポジトリ直下の `.env`（git 管理外）は `pipeline.run` が起動時に読む。既に設定済みの環境変数は上書きしない。別のファイルを使うときは `--env-file` を指定する。
 
 ## 品質ゲート
 

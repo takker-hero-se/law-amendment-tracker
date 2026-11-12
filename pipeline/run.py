@@ -18,7 +18,7 @@ from pathlib import Path
 from pipeline import filter as noise_filter
 from pipeline import generator, summarizer
 from pipeline import state as state_mod
-from pipeline.config import Settings
+from pipeline.config import Settings, load_dotenv
 from pipeline.egov import EgovClient
 from pipeline.errors import PipelineError
 from pipeline.fetcher import EgovSource, GitSource, WatchEntry, load_watchlist
@@ -47,6 +47,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--limit", type=int, default=None, help="1 回に処理する最大件数（既定は設定値）")
     parser.add_argument("--dry-run", action="store_true", help="Markdown を書かず、検知結果と除外理由だけ表示")
     parser.add_argument("--no-state", action="store_true", help="状態ファイルを読み書きしない")
+    parser.add_argument("--env-file", type=Path, default=Path(".env"), help="起動時に読む .env（既存の環境変数は上書きしない。既定 .env）")
     parser.add_argument("-v", "--verbose", action="store_true")
     return parser.parse_args(argv)
 
@@ -118,6 +119,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     try:
+        loaded = load_dotenv(args.env_file)
+        log.debug("loaded %d variables from %s", loaded, args.env_file)
         settings = Settings.from_env()
         report = execute(settings, args)
     except (PipelineError, ValueError) as exc:

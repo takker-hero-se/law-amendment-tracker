@@ -138,26 +138,26 @@ def test_main_success_and_failure(settings: Settings, monkeypatch: pytest.Monkey
     monkeypatch.setattr(run, "EgovClient", lambda *a, **k: make_client())
     strict = Settings(**{**settings.__dict__, "noise_min_changed_chars": 10_000})
     monkeypatch.setattr(run.Settings, "from_env", classmethod(lambda cls: strict))
-    assert run.main(["--since", "2026-01-01", "--dry-run", "--no-state"]) == 0
+    assert run.main(["--env-file", "tests/.no-such-env", "--since", "2026-01-01", "--dry-run", "--no-state"]) == 0
     out = capsys.readouterr().out
     assert "detected=2 kept=1 dropped=1" in out and "dropped:" in out
 
-    assert run.main(["--since", "2000-01-01", "--dry-run", "--no-state"]) == 0
+    assert run.main(["--env-file", "tests/.no-such-env", "--since", "2000-01-01", "--dry-run", "--no-state"]) == 0
     assert "dropped:" in capsys.readouterr().out
     monkeypatch.setattr(run.Settings, "from_env", classmethod(lambda cls: settings))
-    assert run.main(["--dry-run", "--no-state"]) == 0
+    assert run.main(["--env-file", "tests/.no-such-env", "--dry-run", "--no-state"]) == 0
     assert "dropped:" not in capsys.readouterr().out
-    assert run.main(["--since", "2026-01-01", "--no-state"]) == 0
+    assert run.main(["--env-file", "tests/.no-such-env", "--since", "2026-01-01", "--no-state"]) == 0
     assert "written=2" in capsys.readouterr().out
     monkeypatch.setattr(run.Settings, "from_env", original)
     monkeypatch.setenv("LAWTRACK_SOURCE", "bogus")
-    assert run.main(["--no-state"]) == 1
+    assert run.main(["--env-file", "tests/.no-such-env", "--no-state"]) == 1
 
 
 def test_main_pipeline_error(settings: Settings, monkeypatch: pytest.MonkeyPatch) -> None:
     git_settings = Settings(**{**settings.__dict__, "source": "git"})
     monkeypatch.setattr(run.Settings, "from_env", classmethod(lambda cls: git_settings))
-    assert run.main(["--no-state"]) == 1
+    assert run.main(["--env-file", "tests/.no-such-env", "--no-state"]) == 1
 
 
 def test_run_report_text() -> None:

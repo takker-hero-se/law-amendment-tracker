@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
 
-from pipeline.config import Settings
+from pipeline.config import Settings, load_dotenv
 
 
 def test_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -66,3 +67,15 @@ def test_llm_input_boundary(monkeypatch: pytest.MonkeyPatch, value: str, ok: boo
     s = Settings.from_env()
     assert s.max_events_per_run == int(value)
     assert ok or s.max_events_per_run == 999
+
+
+def test_load_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("DOTENV_A", raising=False)
+    monkeypatch.setenv("DOTENV_B", "keep")
+    env = tmp_path / ".env"
+    env.write_text("# comment" + chr(10) + chr(10) + "DOTENV_A = 'quoted'" + chr(10) + "export DOTENV_B=override" + chr(10) + "no_equals_line" + chr(10) + '=novalue' + chr(10), encoding="utf-8")
+    assert load_dotenv(env) == 1
+    assert os.environ["DOTENV_A"] == "quoted"
+    assert os.environ["DOTENV_B"] == "keep"
+    assert load_dotenv(tmp_path / "missing.env") == 0
+

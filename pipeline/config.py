@@ -10,6 +10,28 @@ PROVIDERS = ("anthropic", "gemini", "template")
 SOURCES = ("egov", "git")
 
 
+def load_dotenv(path: Path) -> int:
+    """KEY=VALUE 形式の .env を読み、まだ設定されていない環境変数だけを設定する。設定した件数を返す。
+
+    依存を増やさないための最小実装。コメント行・空行・`export ` 接頭辞・値の引用符に対応する。ファイルがなければ 0。
+    """
+    if not path.is_file():
+        return 0
+    count = 0
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :]
+        key, value = line.split("=", 1)
+        key, value = key.strip(), value.strip().strip('"' + "'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+            count += 1
+    return count
+
+
 def _env(name: str, default: str) -> str:
     value = os.environ.get(name)
     return default if value is None or value == "" else value
