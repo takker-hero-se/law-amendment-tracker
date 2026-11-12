@@ -94,6 +94,9 @@ class AmendmentEvent(BaseModel):
             raise ValueError(f"unknown e-Gov amendment_type {code!r}") from exc
 
 
+SUMMARY_LABEL_RE = re.compile(r"^(何が|なぜ|どう変わったか|どう変わるか|どう)[:：]")
+
+
 class Summary(BaseModel):
     """LLM の構造化出力。スキーマ外の値は拒否する（strict）。"""
 
@@ -132,6 +135,15 @@ class Summary(BaseModel):
         if any(not v for v in cleaned):
             raise ValueError("blank entries are not allowed")
         return cleaned
+
+    @field_validator("summary_points")
+    @classmethod
+    def _strip_labels(cls, value: list[str]) -> list[str]:
+        """LLM が「何が:」「なぜ:」等のラベルを付けたり付けなかったりするので、ラベルを落として揃える。"""
+        stripped = [SUMMARY_LABEL_RE.sub("", v).strip() for v in value]
+        if any(not v for v in stripped):
+            raise ValueError("summary point must not be a label only")
+        return stripped
 
 
 class Amendment(BaseModel):

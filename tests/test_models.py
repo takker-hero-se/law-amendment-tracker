@@ -74,3 +74,13 @@ def test_make_slug(value: str, expected: str) -> None:
 def test_amendment_slug() -> None:
     record = Amendment(event=make_event(), summary=Summary.model_validate(valid_summary()), generated_at="2026-11-12T00:00:00+00:00", provider="template")
     assert record.slug == "500ac0000000001-20270101-508ac0000000056"
+
+
+def test_summary_points_labels_are_stripped() -> None:
+    s = Summary.model_validate(valid_summary(summary_points=["何が: 定義が変わった", "なぜ：整備法のため", "どう変わったか: 義務なし"]))
+    assert s.summary_points == ["定義が変わった", "整備法のため", "義務なし"]
+    plain = Summary.model_validate(valid_summary(summary_points=["定義が変わった", "整備法のため", "義務なし"]))
+    assert plain.summary_points == ["定義が変わった", "整備法のため", "義務なし"]
+    with pytest.raises(ValidationError, match="label only"):
+        Summary.model_validate(valid_summary(summary_points=["何が:", "なぜ: x", "どう: y"]))
+
