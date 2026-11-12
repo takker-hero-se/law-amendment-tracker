@@ -6,10 +6,11 @@ from typing import Any
 import anthropic
 import httpx
 import pytest
+from pydantic import ValidationError
 
 from pipeline import summarizer
 from pipeline.config import Settings
-from pipeline.errors import SummarizerError
+from pipeline.errors import SchemaMismatch, SummarizerError
 from pipeline.models import Summary
 from pipeline.prompt_templates import SYSTEM_PROMPT, user_prompt
 from tests.conftest import make_event
@@ -116,6 +117,44 @@ def _status_error(cls: type[anthropic.APIStatusError], code: int) -> anthropic.A
     request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
     response = httpx.Response(code, request=request, json={"error": {"message": "x"}})
     return cls("x", response=response, body=None)
+
+
+class _RaisingMessages:
+    def parse(self, **kwargs: Any) -> Any:
+        try:
+            Summary.model_validate(valid_summary(target_audience=["a", "b", "c", "d", "e", "f"]))
+        except ValidationError as exc:
+            raise exc
+        raise AssertionError("unreachable")  # pragma: no cover
+
+
+def test_anthropic_provider_sdk_validation_becomes_schema_mismatch() -> None:
+    client = _Client(None)
+    client.messages = _RaisingMessages()  # type: ignore[assignment]
+    provider = summarizer.AnthropicProvider("claude-haiku-5-5", client=client)
+    with pytest.raises(SchemaMismatch, match="at most 5 items"):
+        provider.complete("s", "u", {})
+
+
+class _MismatchThenGood:
+    name = "mock"
+
+    def __init__(self, good: str) -> None:
+        self.good = good
+        self.prompts: list[str] = []
+
+    def complete(self, system: str, user: str, schema: dict[str, Any]) -> str:
+        self.prompts.append(user)
+        if len(self.prompts) == 1:
+            raise SchemaMismatch("too many audiences")
+        return self.good
+
+
+def test_summarize_retries_after_schema_mismatch() -> None:
+    provider = _MismatchThenGood(json.dumps(valid_summary(), ensure_ascii=False))
+    s = summarizer.summarize(make_event(), provider, max_input_chars=2000)
+    assert isinstance(s, Summary) and len(provider.prompts) == 2
+    assert "too many audiences" in provider.prompts[1]
 
 
 def test_anthropic_provider_success() -> None:

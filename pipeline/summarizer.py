@@ -12,7 +12,7 @@ from pydantic import ValidationError
 
 from pipeline.config import Settings
 from pipeline.differ import format_for_llm
-from pipeline.errors import SummarizerError
+from pipeline.errors import SchemaMismatch, SummarizerError
 from pipeline.models import CATEGORIES, AmendmentEvent, Summary
 from pipeline.prompt_templates import SYSTEM_PROMPT, user_prompt
 
@@ -136,6 +136,9 @@ class AnthropicProvider:
             raise SummarizerError(f"anthropic API error {exc.status_code}: {exc.message}") from exc
         except anthropic.APIConnectionError as exc:
             raise SummarizerError(f"anthropic connection error: {exc}") from exc
+        except ValidationError as exc:
+            # 構造化出力でも max_length 等の制約は API 側で強制されず、SDK の parse が pydantic の例外を投げる
+            raise SchemaMismatch(str(exc)[:500]) from exc
         if response.stop_reason == "refusal":
             raise SummarizerError("anthropic declined the request (stop_reason=refusal)")
         parsed = response.parsed_output
@@ -196,10 +199,10 @@ def summarize(event: AmendmentEvent, provider: Provider | TemplateProvider, *, m
     schema = Summary.model_json_schema()
     last_error: Exception | None = None
     for attempt in range(2):
-        raw = provider.complete(SYSTEM_PROMPT, prompt, schema)
         try:
+            raw = provider.complete(SYSTEM_PROMPT, prompt, schema)
             return Summary.model_validate_json(raw)
-        except (ValidationError, json.JSONDecodeError) as exc:
+        except (SchemaMismatch, ValidationError, json.JSONDecodeError) as exc:
             last_error = exc
             prompt += f"\n\n# 前回の出力はスキーマ検証に失敗した（試行 {attempt + 1}）。指摘: {str(exc)[:500]}\n"
     raise SummarizerError(f"LLM output failed schema validation twice: {last_error}")
