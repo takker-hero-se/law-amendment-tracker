@@ -78,6 +78,12 @@ class Settings:
     content_dir: Path = Path("frontend/src/content/amendments")
     state_file: Path = Path("data/state.json")
     llm_input_max_chars: int = 24000
+    # GitHub Issue（チケット）。issues_repo が空なら無効。
+    issues_repo: str = ""
+    issues_token: str = ""
+    issues_api_base: str = "https://api.github.com"
+    issues_interval_sec: float = 1.0
+    site_url: str = ""
 
     def __post_init__(self) -> None:
         if self.llm_provider not in PROVIDERS:
@@ -90,6 +96,12 @@ class Settings:
             raise ValueError("LAWTRACK_REQUEST_INTERVAL_SEC must be >= 0")
         if self.llm_input_max_chars < 1000:
             raise ValueError("LAWTRACK_LLM_INPUT_MAX_CHARS must be >= 1000")
+        if self.issues_repo and "/" not in self.issues_repo:
+            raise ValueError("LAWTRACK_ISSUES_REPO must be owner/name")
+        if self.issues_repo and not self.issues_token:
+            raise ValueError("LAWTRACK_ISSUES_REPO requires LAWTRACK_ISSUES_TOKEN or GITHUB_TOKEN")
+        if self.issues_interval_sec < 0:
+            raise ValueError("LAWTRACK_ISSUES_INTERVAL_SEC must be >= 0")
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -112,4 +124,9 @@ class Settings:
             content_dir=Path(_env("LAWTRACK_CONTENT_DIR", "frontend/src/content/amendments")),
             state_file=Path(_env("LAWTRACK_STATE_FILE", "data/state.json")),
             llm_input_max_chars=_env_int("LAWTRACK_LLM_INPUT_MAX_CHARS", 24000),
+            issues_repo=_env("LAWTRACK_ISSUES_REPO", ""),
+            issues_token=_env("LAWTRACK_ISSUES_TOKEN", _env("GITHUB_TOKEN", "")),
+            issues_api_base=_env("LAWTRACK_ISSUES_API_BASE", "https://api.github.com").rstrip("/"),
+            issues_interval_sec=_env_float("LAWTRACK_ISSUES_INTERVAL_SEC", 1.0),
+            site_url=_env("SITE_URL", "").rstrip("/"),
         )

@@ -1,6 +1,6 @@
 ---
 import { getCollection, render } from "astro:content";
-import { ChevronLeft, ExternalLink, CalendarDays, Clock, FileDiff, GitBranch, Tag, BookOpen } from "lucide-astro";
+import { ChevronLeft, ExternalLink, CalendarDays, Clock, FileDiff, GitBranch, Tag, BookOpen, Ticket } from "lucide-astro";
 import Base from "../../layouts/Base.astro";
 import ImpactBadge from "../../components/ImpactBadge.astro";
 import CategoryChip from "../../components/CategoryChip.astro";
@@ -52,6 +52,7 @@ const description = d.summary_points.join(" ");
         <a href={d.egov_url} rel="noopener" target="_blank" class="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 hover:border-cyan-600"><ExternalLink size={14} />e-Gov 法令検索で原文を見る</a>
         <a href={`https://laws.e-gov.go.jp/law/${d.law_id}/${d.revision_id.split("_")[1]}_${d.revision_id.split("_")[2]}`} rel="noopener" target="_blank" class="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 hover:border-cyan-600"><BookOpen size={14} />この履歴の版（{d.revision_id}）</a>
         <a href={`/map/?law=${d.law_id}`} class="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 hover:border-cyan-600"><GitBranch size={14} />変遷図で見る</a>
+        {d.issue_url && <a href={d.issue_url} rel="noopener" target="_blank" class="inline-flex items-center gap-1 rounded-md border border-cyan-600 bg-cyan-50 px-3 py-1.5 text-cyan-800 hover:bg-cyan-100"><Ticket size={14} />GitHub Issue（対応状況）</a>}
       </div>
     </header>
 

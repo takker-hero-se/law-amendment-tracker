@@ -171,3 +171,39 @@ def test_template_default_provider_path(settings: Settings, client: EgovClient) 
     assert all("provider: template" in p.read_text(encoding="utf-8") for p in settings.content_dir.glob("*.md"))
     assert isinstance(summarizer.build_provider(settings), summarizer.TemplateProvider)
     assert REV_MID["law_revision_id"] != REV_OLD["law_revision_id"]
+
+
+# ------------------------------------------------------------------ tickets
+def test_execute_with_tickets(settings: Settings, client: EgovClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from pipeline import tickets
+    from tests.test_tickets import FakeGitHub, make_client
+
+    with_tickets = Settings(**{**settings.__dict__, "issues_repo": "owner/laws", "issues_token": "t", "site_url": "https://law.example"})
+    gh = FakeGitHub()
+    args = run.parse_args(["--since", "2026-01-01"])
+    report = run.execute(with_tickets, args, client=client, tickets_client=make_client(gh))
+    assert report.written == 2 and report.tickets == 2 and report.tickets_failed == 0
+    assert "tickets=2 tickets_failed=0" in report.as_text()
+    texts = [p.read_text(encoding="utf-8") for p in with_tickets.content_dir.glob("*.md")]
+    assert all("issue_url: https://github.com/owner/laws/issues/" in t for t in texts)
+    assert len(state_mod.load(with_tickets.state_file).tickets) == 2
+    assert "- 記事: https://law.example/amendments/" in gh.issues[1]["body"]
+
+    # 起票に失敗しても記事は書き、失敗数を数える
+    failing = FakeGitHub(fail=[422, 422])
+    report = run.execute(with_tickets, run.parse_args(["--since", "2026-01-01", "--no-state"]), client=client, tickets_client=make_client(failing))
+    assert report.written == 2 and report.tickets == 0 and report.tickets_failed == 2
+
+    # issues_repo が設定されていれば execute が自前でクライアントを作り、終了時に閉じる
+    closed: list[bool] = []
+    own = make_client(FakeGitHub())
+    monkeypatch.setattr(own, "close", lambda: closed.append(True))
+    monkeypatch.setattr(run, "build_tickets_client", lambda s, transport=None: own)
+    run.execute(with_tickets, run.parse_args(["--since", "2026-01-01", "--no-state"]), client=client)
+    assert closed == [True]
+    monkeypatch.undo()
+    assert run.build_tickets_client(settings) is None
+    real = run.build_tickets_client(with_tickets)
+    assert isinstance(real, tickets.GitHubIssues) and real.repo == "owner/laws"
+    real.close()
+    assert run.article_url(settings, "x") is None and run.article_url(with_tickets, "x") == "https://law.example/amendments/x/"

@@ -11,6 +11,8 @@
 - **資格情報なしで完全に動く。** `LAWTRACK_LLM_PROVIDER=template` が既定で、LLM・ネットワーク（テスト時）なしでパイプラインが完走する。
 - **外部 API には礼儀正しく。** e-Gov へのリクエストはスロットル（`LAWTRACK_REQUEST_INTERVAL_SEC`）とリトライ上限を設定に置く。1 回の処理件数は `LAWTRACK_MAX_EVENTS_PER_RUN` で縛る。
 - **出典と免責を外さない。** 生成物には `egov_url`・`revision_id`・`provider`・`generated_at` を必ず入れ、サイトは「機械生成であり法的助言ではない」「官報が優先する」を表示する。
+- **チケットは冪等に。** GitHub Issue は `State.tickets`（履歴 ID → 番号）を見て作成か更新かを決め、同じ履歴を二度起票しない。本文冒頭のマーカーを消さない。
+  起票の失敗は `TicketError` にして件数を報告し、記事の生成は止めない。bot は Issue を閉じない（Close は人の「対応済み」）。
 - **ノイズ除去の理由を残す。** 落としたイベントは理由文字列つきで報告する（`RunReport.dropped_reasons`）。黙って捨てない。
 
 ## 1. 開発フロー（TDD）

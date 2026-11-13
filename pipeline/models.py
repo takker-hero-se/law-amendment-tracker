@@ -153,6 +153,8 @@ class Amendment(BaseModel):
     summary: Summary
     generated_at: str
     provider: str
+    # GitHub Issue（チケット）。チケット連携が無効なら None。
+    issue_url: str | None = None
 
     @property
     def slug(self) -> str:

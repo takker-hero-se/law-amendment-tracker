@@ -14,13 +14,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Any
 
 from pipeline import filter as noise_filter
-from pipeline import generator, summarizer
+from pipeline import generator, summarizer, tickets
 from pipeline import state as state_mod
 from pipeline.config import Settings, load_dotenv
 from pipeline.egov import EgovClient
-from pipeline.errors import PipelineError
+from pipeline.errors import PipelineError, TicketError
 from pipeline.fetcher import EgovSource, GitSource, WatchEntry, load_watchlist
 from pipeline.models import Amendment
 
@@ -34,10 +35,15 @@ class RunReport:
     dropped: int = 0
     written: int = 0
     failed: int = 0
+    tickets: int = 0
+    tickets_failed: int = 0
     dropped_reasons: list[str] | None = None
 
     def as_text(self) -> str:
-        return f"detected={self.detected} kept={self.kept} dropped={self.dropped} written={self.written} failed={self.failed}"
+        text = f"detected={self.detected} kept={self.kept} dropped={self.dropped} written={self.written} failed={self.failed}"
+        if self.tickets or self.tickets_failed:
+            text += f" tickets={self.tickets} tickets_failed={self.tickets_failed}"
+        return text
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -67,10 +73,23 @@ def build_source(settings: Settings, law_ids: list[str], client: EgovClient | No
     return EgovSource(client, watchlist, scan_law_types=scan_types, scan_category_codes=settings.category_codes)
 
 
-def execute(settings: Settings, args: argparse.Namespace, *, client: EgovClient | None = None, provider: summarizer.Provider | summarizer.TemplateProvider | None = None) -> RunReport:
+def build_tickets_client(settings: Settings, transport: Any = None) -> tickets.GitHubIssues | None:
+    if not settings.issues_repo:
+        return None
+    return tickets.GitHubIssues(settings.issues_repo, settings.issues_token, api_base=settings.issues_api_base, timeout=settings.http_timeout_sec, interval_sec=settings.issues_interval_sec, transport=transport)
+
+
+def article_url(settings: Settings, slug: str) -> str | None:
+    return f"{settings.site_url}/amendments/{slug}/" if settings.site_url else None
+
+
+def execute(settings: Settings, args: argparse.Namespace, *, client: EgovClient | None = None, provider: summarizer.Provider | summarizer.TemplateProvider | None = None, tickets_client: tickets.GitHubIssues | None = None) -> RunReport:
     report = RunReport(dropped_reasons=[])
     state_path = Path(settings.state_file)
     state = state_mod.State() if args.no_state else state_mod.load(state_path)
+    own_tickets = tickets_client is None and bool(settings.issues_repo)
+    if own_tickets:
+        tickets_client = build_tickets_client(settings)
     own_client = client is None and settings.source == "egov"
     if own_client:
         client = EgovClient(settings.egov_base_url, timeout=settings.http_timeout_sec, interval_sec=settings.request_interval_sec)
@@ -100,6 +119,14 @@ def execute(settings: Settings, args: argparse.Namespace, *, client: EgovClient 
                 log.error("summarize failed for %s: %s", event.event_id, exc)
                 continue
             record = Amendment(event=event, summary=summary, generated_at=now, provider=provider.name)
+            if tickets_client is not None:
+                try:
+                    ticket = tickets.build(generator.frontmatter(record), generator.render_markdown(record), article_url(settings, record.slug))
+                    record.issue_url = tickets.sync(tickets_client, state, ticket)
+                    report.tickets += 1
+                except TicketError as exc:
+                    report.tickets_failed += 1
+                    log.error("ticket failed for %s: %s", event.event_id, exc)
             path = generator.write(record, Path(settings.content_dir))
             state.mark_seen(event.revision_id)
             report.written += 1
@@ -108,6 +135,8 @@ def execute(settings: Settings, args: argparse.Namespace, *, client: EgovClient 
     finally:
         if own_client and client is not None:
             client.close()
+        if own_tickets and tickets_client is not None:
+            tickets_client.close()
         if not args.no_state and not args.dry_run:
             state.touch()
             state_mod.save(state, state_path)

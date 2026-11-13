@@ -40,6 +40,7 @@ const amendments = defineCollection({
     stats: z.object({ added_lines: z.number().int(), removed_lines: z.number().int(), changed_chars: z.number().int() }),
     source: z.enum(["egov", "git"]),
     text_available: z.boolean().default(true),
+    issue_url: z.string().url().nullable().optional(),
     provider: z.string(),
     generated_at: z.string(),
     egov_url: z.string().url(),

@@ -34,7 +34,11 @@ e-Gov API ──▶ fetcher ──▶ filter ──▶ summarizer ──▶ gene
 3. **LLM 要約（`pipeline/summarizer.py`）** 新旧対照（`differ.format_for_llm`）を LLM に渡し、`Summary` スキーマ（pydantic）で検証する。
    検証に失敗したら指摘を添えて 1 回だけ再試行する。プロバイダは Anthropic（`messages.parse` の構造化出力）、Gemini（`response_json_schema`）、
    そして LLM を使わない `template`（差分の計測値だけから暫定値を付ける。資格情報がなくても完全に動く既定値）。
-4. **生成（`pipeline/generator.py`）** frontmatter 付き Markdown を `frontend/src/content/amendments/<slug>.md` に書く。Astro の Content Collections
+4. **チケット（`pipeline/tickets.py`）** `LAWTRACK_ISSUES_REPO` を設定すると、改正 1 件につき GitHub Issue を 1 件起票する。
+   題名は `[影響度] 法令名：改正法名（施行 日付）`、ラベルは `分野:`・`影響度:`・`施行:`・`種別:`、本文は 3 行要旨・対象・公布/施行日・記事と e-Gov へのリンク・条文差分（折りたたみ）。
+   `data/state.json` の `tickets`（履歴 ID → Issue 番号）で冪等にし、本文冒頭のマーカー `<!-- lawtrack:revision_id=… -->` で逆引きできる。
+   既存の記事は `python -m pipeline.tickets_backfill` で一括起票する（`--update` で起票済みも更新、`--limit N`）。Issue の Close は人が「対応済み」の印として使う想定で、bot は閉じない。
+5. **生成（`pipeline/generator.py`）** frontmatter 付き Markdown を `frontend/src/content/amendments/<slug>.md` に書く。Astro の Content Collections
    （`frontend/src/content.config.ts`）が同じスキーマで型検証する。
 
 ### 注意（e-Gov API の性質）
@@ -85,6 +89,8 @@ cd frontend; npx astro check; npm run build
 - デプロイ先: Variables に `CF_PAGES_PROJECT` と Secrets に `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` を置くと Cloudflare Pages。
   置かなければ GitHub Pages（リポジトリ設定で Pages の Source を "GitHub Actions" にする）。`SITE_URL` を Variables に置くと canonical / Feed の URL になる。
 - LLM: Secrets に `ANTHROPIC_API_KEY` か `GEMINI_API_KEY`、Variables に `LAWTRACK_LLM_PROVIDER` を置く。
+- チケット: Variables に `LAWTRACK_ISSUES_REPO`（`owner/name`）。同じリポジトリなら `GITHUB_TOKEN` で起票できる（ワークフローに `issues: write` 付与済み）。
+  別リポジトリに起票するなら Secrets に `LAWTRACK_ISSUES_TOKEN`（issues:write の fine-grained PAT）を置く。
 - `.github/workflows/ci.yml` push / PR で ruff・mypy・pytest・astro check・build を走らせる。
 
 ## ディレクトリ
@@ -98,6 +104,8 @@ pipeline/        差分検知・ノイズ除去・LLM 要約・Markdown 生成�
   differ.py      unified diff・新旧対照の整形
   summarizer.py  Anthropic / Gemini / template プロバイダ
   generator.py   frontmatter 付き Markdown
+  tickets.py     GitHub Issue（チケット）の起票・更新
+  tickets_backfill.py  既存記事の一括起票 CLI
   run.py         CLI
 tests/           pytest（FakeEgov で API を模擬）
 data/            watchlist.json（監視対象）、state.json（スナップショット・処理済み履歴）

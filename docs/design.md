@@ -55,6 +55,17 @@ Git ミラー（houritsu 形式）は `GitSource` で前回コミットと HEAD 
 - 構造化出力でも `max_length` 等の制約は API 側で強制されない。SDK の `parse` が投げる pydantic の例外は `SchemaMismatch` に変換して同じ再試行に乗せる（2026-11-12 に `target_audience` 6 件で実行が止まった不具合の対処）。
 - `template` は LLM を使わず、e-Gov の分野分類 → 本サイトの分野のマッピングと差分行数だけで暫定値を付ける。本文に「LLM 要約を生成していない」と明記する。
 
+## チケット（GitHub Issue）
+
+houritsu（Kohei-Wada/houritsu）は 1 改正法の施行 = 1 コミットで履歴を表現する。本サイトはその上に「改正 1 件 = Issue 1 件」を載せ、
+実務者が購読・検索・担当割当・Close（対応済み）で運用できるようにする（2026-11-14、ユーザー選択）。
+
+- 題名 `[影響度] 法令名：改正法名（施行 日付）`。ラベル `分野:*`（複数）・`影響度:High|Medium|Low`・`施行:施行済|未施行|旧版|廃止`・`種別:新設|一部改正|廃止`。
+- 本文: マーカー → 3 行要旨 → 対象 → メタデータ表 → リンク（記事・e-Gov）→ 条文差分（`<details>`、30,000 字で打ち切り）→ 免責。
+- 冪等性: `State.tickets`。状態ファイルを失ってもマーカー `lawtrack:revision_id=` で検索して復元できる。
+- レート: 書き込みごとに `LAWTRACK_ISSUES_INTERVAL_SEC`（既定 1 秒）空け、403/429 は `Retry-After` を待って再試行（最大 3 回）。GitHub の二次制限は毎時 500 件なので、一括起票は 1 時間あたり 500 件未満で回す。
+- 記事側: frontmatter `issue_url` を持ち、記事ページから Issue へリンクする。
+
 ## フロントエンド
 
 - Astro 5（Content Collections, `glob` loader）+ Tailwind CSS 4（`@tailwindcss/vite`）+ lucide-astro + d3。

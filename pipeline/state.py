@@ -20,6 +20,8 @@ class State(BaseModel):
     seen_revision_ids: list[str] = Field(default_factory=list)
     # Git ミラーの前回コミット
     git_last_commit: str | None = None
+    # law_revision_id -> GitHub Issue 番号（チケットの冪等性）
+    tickets: dict[str, int] = Field(default_factory=dict)
 
     def mark_seen(self, revision_id: str) -> None:
         if revision_id in self.seen_revision_ids:

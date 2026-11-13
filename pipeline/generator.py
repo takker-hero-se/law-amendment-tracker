@@ -40,6 +40,7 @@ def frontmatter(record: Amendment) -> dict[str, object]:
         "provider": record.provider,
         "generated_at": record.generated_at,
         "egov_url": f"https://laws.e-gov.go.jp/law/{ev.law.law_id}",
+        "issue_url": record.issue_url,
     }
 
 

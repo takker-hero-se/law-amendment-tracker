@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: daily-law-tracker
@@ -36,6 +37,9 @@ jobs:
       LAWTRACK_MAX_EVENTS_PER_RUN: ${{ github.event.inputs.limit || '30' }}
       LAWTRACK_REQUEST_INTERVAL_SEC: "0.5"
       SITE_URL: ${{ vars.SITE_URL }}
+      # GitHub Issue（チケット）。Variables の LAWTRACK_ISSUES_REPO が空なら無効。別リポジトリに起票するときは Secrets に LAWTRACK_ISSUES_TOKEN（issues:write の PAT）を置く。
+      LAWTRACK_ISSUES_REPO: ${{ vars.LAWTRACK_ISSUES_REPO }}
+      LAWTRACK_ISSUES_TOKEN: ${{ secrets.LAWTRACK_ISSUES_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
