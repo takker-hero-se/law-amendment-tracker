@@ -1,10 +1,9 @@
 ---
 import { getCollection } from "astro:content";
-import { ArrowRight, AlertTriangle } from "lucide-astro";
+import { ArrowRight, AlertTriangle, Search } from "lucide-astro";
 import Base from "../layouts/Base.astro";
 import AmendmentCard from "../components/AmendmentCard.astro";
-import FilterBar from "../components/FilterBar.astro";
-import { byPromulgationDesc, byEnforcementAsc, IMPACT_ORDER, SITE_TAGLINE, amendmentPath, formatDate } from "../lib/amendments";
+import { byPromulgationDesc, byEnforcementAsc, SITE_TAGLINE, amendmentPath, formatDate } from "../lib/amendments";
 
 const all = (await getCollection("amendments")).sort(byPromulgationDesc);
 const today = new Date().toISOString().slice(0, 10);
@@ -13,7 +12,8 @@ const upcoming = all
   .filter((e) => e.data.enforcement_date && e.data.enforcement_date >= today)
   .sort(byEnforcementAsc)
   .slice(0, 6);
-const sorted = [...all].sort((a, b) => IMPACT_ORDER[a.data.impact_level] - IMPACT_ORDER[b.data.impact_level] || byPromulgationDesc(a, b));
+const RECENT = 24;
+const recent = all.slice(0, RECENT);
 const latestGenerated = all.map((e) => e.data.generated_at).sort().at(-1) ?? "-";
 ---
 
@@ -27,6 +27,13 @@ const latestGenerated = all.map((e) => e.data.generated_at).sort().at(-1) ?? "-"
       <div class="rounded-lg bg-navy-800 p-3"><dt class="text-xs text-slate-300">未施行</dt><dd class="text-xl font-bold text-cyan-300">{all.filter((e) => e.data.enforcement_status === "UnEnforced").length} <span class="text-xs font-normal">件</span></dd></div>
       <div class="rounded-lg bg-navy-800 p-3"><dt class="text-xs text-slate-300">最終更新</dt><dd class="text-sm font-semibold">{latestGenerated.slice(0, 10)}</dd></div>
     </dl>
+    <form action="/amendments/" method="get" class="mt-5 flex max-w-xl gap-2" role="search">
+      <label class="relative flex-1">
+        <Search size={16} class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input name="q" type="search" placeholder="法令名・改正法で全件を検索" class="w-full rounded-md border border-navy-700 bg-navy-800 py-2 pl-8 pr-3 text-sm text-white placeholder:text-slate-400 focus:border-cyan-500 focus:outline-none" autocomplete="off" />
+      </label>
+      <button type="submit" class="rounded-md bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-500">検索</button>
+    </form>
   </section>
 
   {
@@ -70,13 +77,16 @@ const latestGenerated = all.map((e) => e.data.generated_at).sort().at(-1) ?? "-"
   }
 
   <section class="mt-10">
-    <h2 class="text-lg font-bold">すべての改正</h2>
-    <p class="mt-1 text-sm text-muted">影響度の高い順、同順位では公布日の新しい順。分野・影響度・施行状態・キーワードで絞り込める。</p>
-    <div class="mt-3"><FilterBar total={all.length} /></div>
-    <div class="mt-4 grid gap-3 md:grid-cols-2" id="list">
-      {sorted.map((e) => <AmendmentCard entry={e} />)}
+    <div class="flex items-baseline justify-between">
+      <h2 class="text-lg font-bold">最近公布された改正</h2>
+      <a href="/amendments/" class="flex items-center gap-1 text-sm text-cyan-600 hover:underline">
+        全 {all.length} 件の一覧へ <ArrowRight size={14} />
+      </a>
     </div>
-    <p data-empty hidden class="mt-6 rounded-lg border border-dashed border-line bg-white p-6 text-center text-sm text-muted">条件に一致する改正はない。</p>
+    <p class="mt-1 text-sm text-muted">公布日の新しい順に {Math.min(RECENT, all.length)} 件。分野・影響度・施行状態での絞り込みは一覧ページで行う。</p>
+    <div class="mt-4 grid gap-3 md:grid-cols-2">
+      {recent.map((e) => <AmendmentCard entry={e} />)}
+    </div>
     {all.length === 0 && <p class="mt-6 rounded-lg border border-dashed border-line bg-white p-6 text-center text-sm text-muted">まだ改正データがない。`python -m pipeline.run --since YYYY-MM-DD` を実行して生成する。</p>}
   </section>
 </Base>

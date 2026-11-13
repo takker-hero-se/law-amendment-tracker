@@ -1,0 +1,31 @@
+---
+import { getCollection } from "astro:content";
+import { Rss } from "lucide-astro";
+import Base from "../../layouts/Base.astro";
+import AmendmentRow from "../../components/AmendmentRow.astro";
+import FilterBar from "../../components/FilterBar.astro";
+import Pager from "../../components/Pager.astro";
+import { byPromulgationDesc } from "../../lib/amendments";
+
+const all = (await getCollection("amendments")).sort(byPromulgationDesc);
+const years = [...new Set(all.map((e) => e.data.promulgation_date.slice(0, 4)))].sort();
+const span = years.length ? `${years[0]}〜${years.at(-1)} 年公布` : "";
+---
+
+<Base title="改正一覧" description="収録しているすべての法改正。分野・影響度・施行状態・キーワードで絞り込める。">
+  <div class="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <p class="text-xs text-muted">全件一覧</p>
+      <h1 class="text-2xl font-bold">改正一覧</h1>
+      <p class="mt-1 text-sm text-muted">公布日の新しい順。{span}、{all.length} 件。分野・影響度・施行状態・キーワードで絞り込み、50 件ずつ表示する。</p>
+    </div>
+    <a href="/rss.xml" class="flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs hover:border-cyan-600"><Rss size={14} />RSS</a>
+  </div>
+  <div class="mt-4"><FilterBar total={all.length} /></div>
+  <ul class="mt-4 rounded-lg border border-line bg-white shadow-sm" id="list">
+    {all.map((e) => <AmendmentRow entry={e} />)}
+  </ul>
+  <p data-empty hidden class="mt-6 rounded-lg border border-dashed border-line bg-white p-6 text-center text-sm text-muted">条件に一致する改正はない。</p>
+  <Pager />
+  {all.length === 0 && <p class="mt-6 rounded-lg border border-dashed border-line bg-white p-6 text-center text-sm text-muted">まだ改正データがない。</p>}
+</Base>

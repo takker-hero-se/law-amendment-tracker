@@ -1,5 +1,5 @@
 ---
-import { Scale, Network, CalendarClock, Rss, Github } from "lucide-astro";
+import { Scale, Network, CalendarClock, List, Rss, Github } from "lucide-astro";
 import { SITE_NAME } from "../lib/amendments";
 
 interface Props {
@@ -9,6 +9,7 @@ const { dark = false } = Astro.props;
 const path = Astro.url.pathname;
 const nav = [
   { href: "/", label: "新着・重要", icon: Scale },
+  { href: "/amendments/", label: "改正一覧", icon: List },
   { href: "/timeline/", label: "施行日タイムライン", icon: CalendarClock },
   { href: "/map/", label: "法令変遷図", icon: Network },
 ];

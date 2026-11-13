@@ -1,0 +1,40 @@
+---
+/**
+ * 一覧用の軽量な 1 行表示。カード（AmendmentCard）はアイコンと要旨を含み 1 件あたり約 5KB になるので、
+ * 全件を並べる一覧ページ（/amendments/、分野別）ではこの行を使い、FilterBar の絞り込み・ページ分割の対象にする。
+ */
+import ImpactBadge from "./ImpactBadge.astro";
+import { amendmentPath, formatDate, STATUS_LABEL, type Amendment } from "../lib/amendments";
+
+interface Props {
+  entry: Amendment;
+}
+const { entry } = Astro.props;
+const d = entry.data;
+const statusTone = d.enforcement_status === "UnEnforced" ? "text-cyan-600" : d.enforcement_status === "Repeal" ? "text-impact-high" : "text-muted";
+---
+
+<li
+  class="amendment-row border-b border-line last:border-b-0"
+  data-categories={d.category_slugs.join(" ")}
+  data-impact={d.impact_level}
+  data-status={d.enforcement_status}
+  data-search={`${d.title} ${d.law_num} ${d.amending_law_title ?? ""}`.toLowerCase()}
+>
+  <a href={amendmentPath(entry)} class="block px-3 py-2.5 hover:bg-cyan-50">
+    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+      <ImpactBadge level={d.impact_level} />
+      <span class="rounded-md bg-navy-900 px-1.5 py-0.5 font-semibold text-white">{d.amendment_type}</span>
+      {d.categories.map((c) => <span class="rounded-md border border-line bg-cyan-50 px-1.5 py-0.5 text-navy-800">{c}</span>)}
+      <span class={`ml-auto font-medium ${statusTone}`}>{STATUS_LABEL[d.enforcement_status]}</span>
+    </div>
+    <div class="mt-1 text-sm font-bold leading-snug">
+      {d.title}
+      <span class="ml-1 text-xs font-normal text-muted">{d.law_num}</span>
+    </div>
+    <div class="mt-0.5 text-xs text-muted">
+      {d.amending_law_title && <span>改正法: {d.amending_law_title} · </span>}
+      公布 {formatDate(d.promulgation_date)} · 施行 {d.enforcement_date ? formatDate(d.enforcement_date) : d.enforcement_note}
+    </div>
+  </a>
+</li>

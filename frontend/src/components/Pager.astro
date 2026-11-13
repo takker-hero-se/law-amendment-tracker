@@ -1,0 +1,10 @@
+---
+/** FilterBar のスクリプトが駆動するページ送り。絞り込み結果が pageSize を超えるときだけ表示する。 */
+import { ChevronLeft, ChevronRight } from "lucide-astro";
+---
+
+<nav data-pager hidden class="mt-4 flex items-center justify-center gap-3 text-sm" aria-label="ページ送り">
+  <button type="button" data-prev class="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 hover:border-cyan-600 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={14} />前へ</button>
+  <span data-page class="text-muted"></span>
+  <button type="button" data-next class="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 hover:border-cyan-600 disabled:cursor-not-allowed disabled:opacity-40">次へ<ChevronRight size={14} /></button>
+</nav>

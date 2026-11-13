@@ -2,8 +2,9 @@
 import { getCollection } from "astro:content";
 import { Rss } from "lucide-astro";
 import Base from "../../../layouts/Base.astro";
-import AmendmentCard from "../../../components/AmendmentCard.astro";
+import AmendmentRow from "../../../components/AmendmentRow.astro";
 import FilterBar from "../../../components/FilterBar.astro";
+import Pager from "../../../components/Pager.astro";
 import { CATEGORY_SLUGS } from "../../../content.config";
 import { byPromulgationDesc, categoryBySlug, IMPACT_ORDER, type CategorySlug } from "../../../lib/amendments";
 
@@ -23,6 +24,7 @@ const entries = (await getCollection("amendments", (e) => e.data.category_slugs.
     <div>
       <p class="text-xs text-muted">分野別一覧</p>
       <h1 class="text-2xl font-bold">{category}</h1>
+      <p class="mt-1 text-sm text-muted">影響度の高い順、同順位では公布日の新しい順。{entries.length} 件を 50 件ずつ表示する。</p>
     </div>
     <a href={`/category/${cat}/rss.xml`} class="flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs hover:border-cyan-600"><Rss size={14} />この分野の RSS</a>
   </div>
@@ -36,9 +38,10 @@ const entries = (await getCollection("amendments", (e) => e.data.category_slugs.
     }
   </nav>
   <div class="mt-4"><FilterBar total={entries.length} fixedCategory={cat} /></div>
-  <div class="mt-4 grid gap-3 md:grid-cols-2">
-    {entries.map((e) => <AmendmentCard entry={e} />)}
-  </div>
+  <ul class="mt-4 rounded-lg border border-line bg-white shadow-sm" id="list">
+    {entries.map((e) => <AmendmentRow entry={e} />)}
+  </ul>
   <p data-empty hidden class="mt-6 rounded-lg border border-dashed border-line bg-white p-6 text-center text-sm text-muted">条件に一致する改正はない。</p>
+  <Pager />
   {entries.length === 0 && <p class="mt-6 rounded-lg border border-dashed border-line bg-white p-6 text-center text-sm text-muted">この分野の改正はまだ収録されていない。</p>}
 </Base>

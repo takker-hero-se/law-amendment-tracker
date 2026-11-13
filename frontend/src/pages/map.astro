@@ -2,12 +2,11 @@
 import { getCollection } from "astro:content";
 import { Search, Info, X, ExternalLink, ArrowRight } from "lucide-astro";
 import Base from "../layouts/Base.astro";
-import { buildGraph } from "../lib/amendments";
 import { CATEGORIES, CATEGORY_SLUGS } from "../content.config";
 
 const entries = await getCollection("amendments");
-const graph = buildGraph(entries);
-const lawCount = new Set(graph.nodes.map((n) => n.lawId)).size;
+const total = entries.length;
+const lawCount = new Set(entries.map((e) => e.data.law_id)).size;
 const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0, 10) ?? "-";
 ---
 
@@ -20,6 +19,15 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
         <button data-layout="category" class="layout-btn px-3 py-1">分野</button>
         <button data-layout="custom" class="layout-btn px-3 py-1">カスタム</button>
       </div>
+      <label class="flex items-center gap-1 text-slate-400">
+        期間
+        <select id="map-years" class="rounded-md border border-navy-700 bg-navy-900 px-2 py-1 text-xs text-white focus:border-cyan-500 focus:outline-none" title="公布年で絞り込む">
+          <option value="3">直近 3 年</option>
+          <option value="5">直近 5 年</option>
+          <option value="10">直近 10 年</option>
+          <option value="0">すべて</option>
+        </select>
+      </label>
       <div class="flex flex-wrap gap-1" id="cat-filter">
         {CATEGORIES.map((c, i) => (<button data-cat={CATEGORY_SLUGS[i]} class="cat-toggle is-on rounded-md border border-navy-700 px-2 py-0.5" style={`--c: var(--cat-${CATEGORY_SLUGS[i]})`}><span class="mr-1 inline-block h-2 w-2 rounded-full" style="background: var(--c)"></span>{c}</button>))}
       </div>
@@ -27,16 +35,17 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
         <Search size={14} class="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
         <input id="map-q" type="search" placeholder="法令名・改正法を検索…" class="w-56 rounded-md border border-cyan-600/60 bg-navy-900 py-1 pl-7 pr-2 text-xs text-white placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none" />
       </label>
-      <span class="text-slate-300">表示中 <b id="map-shown" class="text-white">{graph.nodes.length}</b> / {graph.nodes.length} 件 · {lawCount} 法令</span>
+      <span class="text-slate-300">表示中 <b id="map-shown" class="text-white">…</b> / {total} 件 · <span id="map-laws">{lawCount}</span> 法令</span>
       <button id="map-reset" class="rounded-md border border-navy-700 px-2 py-1 hover:bg-navy-800" title="表示をリセット">⟲</button>
     </div>
 
     <div class="relative flex-1 overflow-hidden" id="map-root">
       <svg id="map" class="h-full w-full cursor-grab active:cursor-grabbing"></svg>
+      <div id="map-loading" class="pointer-events-none absolute inset-0 grid place-items-center text-sm text-slate-400">グラフデータを読み込んでいる…</div>
 
       <div class="pointer-events-none absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-start gap-2 rounded-lg border border-orange-400/60 bg-navy-900/95 px-3 py-2 text-xs text-slate-100 shadow-lg" id="map-hint">
         <Info size={14} class="mt-0.5 shrink-0 text-orange-300" />
-        <span id="map-hint-text">タイムライン: 法令ごとの改正を公布年の列に並べ、同じ法令の履歴を線でつないだレイアウトである。ノードをクリックすると要旨を表示する。</span>
+        <span id="map-hint-text">タイムライン: 法令ごとの改正を公布年の列に並べ、同じ法令の履歴を線でつないだレイアウトである。初期表示は直近 3 年に公布された改正で、「期間」で広げられる。ノードをクリックすると要旨を表示する。</span>
         <button class="pointer-events-auto ml-1 text-slate-400 hover:text-white" id="map-hint-close" aria-label="閉じる"><X size={14} /></button>
       </div>
 
@@ -74,8 +83,6 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
     </div>
     <div class="border-t border-navy-700 px-3 py-1 text-[11px] text-slate-500">データ更新日: {generated} · 出典: e-Gov 法令 API v2 · 配置は公布年、線は同一法令の連続する履歴</div>
   </div>
-
-  <script type="application/json" id="graph-data" set:html={JSON.stringify(graph)} />
 </Base>
 
 <style is:global>
@@ -173,213 +180,265 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
   interface Node {
     id: string; slug: string; lawId: string; title: string; short: string; year: number; promulgation: string;
     enforcement: string | null; status: string; impact: "High" | "Medium" | "Low"; type: string; categories: string[];
-    categorySlugs: string[]; points: string[]; amendingLaw: string | null; isLatest: boolean; x?: number; y?: number; lane?: number;
+    categorySlugs: string[]; points: string[]; amendingLaw: string | null; isLatest: boolean; x?: number; y?: number;
   }
   interface Edge { source: string; target: string }
-  const data = JSON.parse(document.getElementById("graph-data")!.textContent || "{}") as { nodes: Node[]; edges: Edge[]; years: number[] };
-  const nodes = data.nodes;
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-  const edges = data.edges.filter((e) => byId.has(e.source) && byId.has(e.target));
 
-  // ---------------------------------------------------------------- layout
   const COL_W = 250, LANE_H = 40, NODE_W = 172, NODE_H = 26, TOP = 50, LEFT = 190;
-  const years = data.years.length ? d3.range(Math.min(...data.years), Math.max(...data.years) + 1) : [new Date().getFullYear()];
-  const yearX = new Map(years.map((y, i) => [y, LEFT + i * COL_W]));
-  const catOrder = ["it-security", "hr-labor", "tax-accounting", "legal-compliance", "ip", "other"];
-  const catX = new Map(catOrder.map((c, i) => [c, LEFT + i * COL_W]));
-
-  // 法令ごとのレーン（分野 → 法令名順）。同じ年に複数の改正がある法令はレーンを縦に広げて重ねない。
   const ROW_H = NODE_H + 8;
-  const lawsByCat = d3.group(nodes, (n) => n.categorySlugs[0] ?? "other");
-  const laneTop = new Map<string, number>();
-  const laneLabel: { y: number; title: string }[] = [];
-  let cursorY = TOP;
-  for (const c of catOrder) {
-    const list = [...new Map((lawsByCat.get(c) ?? []).map((n) => [n.lawId, n])).values()].sort((a, b) => a.title.localeCompare(b.title, "ja"));
-    for (const n of list) {
-      const perYear = d3.rollup(nodes.filter((m) => m.lawId === n.lawId), (v) => v.length, (m) => m.year);
-      const rows = Math.max(1, ...perYear.values());
-      laneTop.set(n.lawId, cursorY);
-      laneLabel.push({ y: cursorY + NODE_H / 2 + 3, title: n.short });
-      cursorY += Math.max(LANE_H, rows * ROW_H + 8);
-    }
-  }
-  const HEIGHT = cursorY + 60;
+  const catOrder = ["it-security", "hr-labor", "tax-accounting", "legal-compliance", "ip", "other"];
+  const catLabel: Record<string, string> = { "it-security": "情報セキュリティ・IT", "hr-labor": "人事・労務", "tax-accounting": "税務・会計", "legal-compliance": "企業法務・コンプライアンス", ip: "知財", other: "その他" };
+  const catX = new Map(catOrder.map((c, i) => [c, LEFT + i * COL_W]));
+  const thisYear = new Date().getFullYear();
 
-  function layoutTimeline() {
-    const perCell = new Map<string, number>();
-    for (const n of nodes.sort((a, b) => a.promulgation.localeCompare(b.promulgation) || (a.enforcement ?? "").localeCompare(b.enforcement ?? ""))) {
-      const key = `${n.lawId}:${n.year}`;
-      const k = perCell.get(key) ?? 0; perCell.set(key, k + 1);
-      const month = Number(n.promulgation.slice(5, 7)) - 1;
-      n.x = (yearX.get(n.year) ?? LEFT) + 10 + Math.min(month * 4, 44);
-      n.y = (laneTop.get(n.lawId) ?? TOP) + k * ROW_H;
-    }
-  }
-  function layoutCategory() {
-    // 分野の列ごとに法令を縦に並べ、同じ法令の改正は古い順に右へ少しずつずらして重ねる
-    const nextY = new Map<string, number>();
-    const lawY = new Map<string, number>();
-    const seen = new Map<string, number>();
-    for (const n of nodes.sort((a, b) => a.lawId.localeCompare(b.lawId) || a.promulgation.localeCompare(b.promulgation))) {
-      const c = n.categorySlugs[0] ?? "other";
-      if (!lawY.has(n.lawId)) {
-        lawY.set(n.lawId, nextY.get(c) ?? TOP);
-        nextY.set(c, (nextY.get(c) ?? TOP) + LANE_H);
+  async function main() {
+    const res = await fetch("/map/graph.json");
+    if (!res.ok) throw new Error(`graph.json ${res.status}`);
+    const data = (await res.json()) as { nodes: Node[]; edges: Edge[]; years: number[] };
+    document.getElementById("map-loading")?.remove();
+    const nodes = data.nodes;
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const allEdges = data.edges.filter((e) => byId.has(e.source) && byId.has(e.target));
+
+    // ------------------------------------------------- 期間（公布年）による対象集合
+    // 全履歴は 1,000 件を超えるので、初期表示は直近 3 年に絞り、「期間」セレクタで広げる。?law= 指定時は系譜全体を出す。
+    const yearSel = document.getElementById("map-years") as HTMLSelectElement;
+    let active: Node[] = [];
+    let edges: Edge[] = [];
+    let activeIds = new Set<string>();
+    let years: number[] = [];
+    let yearX = new Map<number, number>();
+    let laneTop = new Map<string, number>();
+    let laneLabel: { y: number; title: string }[] = [];
+    let HEIGHT = TOP + 60;
+
+    function rebuild() {
+      const span = Number(yearSel.value);
+      const from = span > 0 ? thisYear - span + 1 : -Infinity;
+      active = nodes.filter((n) => n.year >= from);
+      activeIds = new Set(active.map((n) => n.id));
+      edges = allEdges.filter((e) => activeIds.has(e.source) && activeIds.has(e.target));
+      const ys = active.map((n) => n.year);
+      years = ys.length ? d3.range(Math.min(...ys), Math.max(...ys) + 1) : [thisYear];
+      yearX = new Map(years.map((y, i) => [y, LEFT + i * COL_W]));
+      // 法令ごとのレーン（分野 → 法令名順）。同じ年に複数の改正がある法令はレーンを縦に広げて重ねない。
+      const lawsByCat = d3.group(active, (n) => n.categorySlugs[0] ?? "other");
+      laneTop = new Map();
+      laneLabel = [];
+      let cursorY = TOP;
+      for (const c of catOrder) {
+        const list = [...new Map((lawsByCat.get(c) ?? []).map((n) => [n.lawId, n])).values()].sort((a, b) => a.title.localeCompare(b.title, "ja"));
+        for (const n of list) {
+          const perYear = d3.rollup(active.filter((m) => m.lawId === n.lawId), (v) => v.length, (m) => m.year);
+          const rows = Math.max(1, ...perYear.values());
+          laneTop.set(n.lawId, cursorY);
+          laneLabel.push({ y: cursorY + NODE_H / 2 + 3, title: n.short });
+          cursorY += Math.max(LANE_H, rows * ROW_H + 8);
+        }
       }
-      const idx = seen.get(n.lawId) ?? 0; seen.set(n.lawId, idx + 1);
-      n.x = (catX.get(c) ?? LEFT) + 10 + Math.min(idx, 6) * 9;
-      n.y = (lawY.get(n.lawId) ?? TOP) + Math.min(idx, 6) * 2;
+      HEIGHT = cursorY + 60;
+      document.getElementById("map-laws")!.textContent = String(new Set(active.map((n) => n.lawId)).size);
+    }
+
+    function layoutTimeline() {
+      const perCell = new Map<string, number>();
+      for (const n of active.sort((a, b) => a.promulgation.localeCompare(b.promulgation) || (a.enforcement ?? "").localeCompare(b.enforcement ?? ""))) {
+        const key = `${n.lawId}:${n.year}`;
+        const k = perCell.get(key) ?? 0; perCell.set(key, k + 1);
+        const month = Number(n.promulgation.slice(5, 7)) - 1;
+        n.x = (yearX.get(n.year) ?? LEFT) + 10 + Math.min(month * 4, 44);
+        n.y = (laneTop.get(n.lawId) ?? TOP) + k * ROW_H;
+      }
+    }
+    function layoutCategory() {
+      // 分野の列ごとに法令を縦に並べ、同じ法令の改正は古い順に右へ少しずつずらして重ねる
+      const nextY = new Map<string, number>();
+      const lawY = new Map<string, number>();
+      const seen = new Map<string, number>();
+      for (const n of active.sort((a, b) => a.lawId.localeCompare(b.lawId) || a.promulgation.localeCompare(b.promulgation))) {
+        const c = n.categorySlugs[0] ?? "other";
+        if (!lawY.has(n.lawId)) {
+          lawY.set(n.lawId, nextY.get(c) ?? TOP);
+          nextY.set(c, (nextY.get(c) ?? TOP) + LANE_H);
+        }
+        const idx = seen.get(n.lawId) ?? 0; seen.set(n.lawId, idx + 1);
+        n.x = (catX.get(c) ?? LEFT) + 10 + Math.min(idx, 6) * 9;
+        n.y = (lawY.get(n.lawId) ?? TOP) + Math.min(idx, 6) * 2;
+      }
+    }
+    function relayout() {
+      if (layout === "category") layoutCategory();
+      else layoutTimeline();
+    }
+
+    // ------------------------------------------------------------------ svg
+    const svg = d3.select<SVGSVGElement, unknown>("#map");
+    const root = svg.append("g");
+    const gGrid = root.append("g");
+    const gEdges = root.append("g");
+    const gNodes = root.append("g");
+    const zoom = d3.zoom<SVGSVGElement, unknown>().scaleExtent([0.25, 2.5]).on("zoom", (ev) => { root.attr("transform", ev.transform); drawMinimap(ev.transform); });
+    svg.call(zoom);
+
+    let layout: "timeline" | "category" | "custom" = "timeline";
+    let selected: Node | null = null;
+    const activeCats = new Set(catOrder);
+    let needle = "";
+
+    function nodeLabel(n: Node) {
+      const base = n.amendingLaw ? n.amendingLaw.replace(/の一部を改正する法律.*$/, "改正").replace(/の施行に伴う関係法律の整備.*$/, "整備").replace(/に関する法律/g, "法") : n.type;
+      const short = base.length > 11 ? base.slice(0, 10) + "…" : base;
+      return `${n.promulgation.slice(5)} ${short}`;
+    }
+
+    function edgePath(a: Node, b: Node) {
+      const x1 = (a.x ?? 0) + NODE_W, y1 = (a.y ?? 0) + NODE_H / 2, x2 = b.x ?? 0, y2 = (b.y ?? 0) + NODE_H / 2;
+      const dx = Math.max(40, (x2 - x1) / 2);
+      return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
+    }
+
+    function drawGrid() {
+      gGrid.selectAll("*").remove();
+      const cols = layout === "category" ? catOrder.map((c) => ({ x: catX.get(c)!, label: catLabel[c] })) : years.map((y) => ({ x: yearX.get(y)!, label: String(y) }));
+      for (const c of cols) {
+        gGrid.append("line").attr("class", "year-line").attr("x1", c.x - 15).attr("x2", c.x - 15).attr("y1", 0).attr("y2", HEIGHT);
+        gGrid.append("text").attr("class", "year-label").attr("x", c.x + COL_W / 2 - 15).attr("y", 24).attr("text-anchor", "middle").text(c.label);
+      }
+      if (layout === "timeline") {
+        for (const l of laneLabel) gGrid.append("text").attr("class", "lane-label").attr("x", LEFT - 22).attr("y", l.y).attr("text-anchor", "end").text(l.title);
+      }
+    }
+
+    function visible(n: Node) {
+      if (!activeCats.has(n.categorySlugs[0] ?? "other")) return false;
+      if (!needle) return true;
+      return `${n.title} ${n.amendingLaw ?? ""} ${n.lawId}`.toLowerCase().includes(needle);
+    }
+
+    function render() {
+      drawGrid();
+      const edgeSel = gEdges.selectAll<SVGPathElement, Edge>("path").data(edges, (e) => e.source + ">" + e.target);
+      edgeSel.enter().append("path").attr("class", "edge").merge(edgeSel).attr("d", (e) => edgePath(byId.get(e.source)!, byId.get(e.target)!))
+        .classed("dim", (e) => !(visible(byId.get(e.source)!) && visible(byId.get(e.target)!)))
+        .classed("selected", (e) => !!selected && byId.get(e.source)!.lawId === selected.lawId);
+      edgeSel.exit().remove();
+
+      const sel = gNodes.selectAll<SVGGElement, Node>("g.node").data(active, (n) => n.id);
+      const enter = sel.enter().append("g").attr("class", "node");
+      enter.append("rect").attr("width", NODE_W).attr("height", NODE_H);
+      enter.append("text").attr("x", 10).attr("y", NODE_H / 2 + 4);
+      enter.append("circle").attr("class", "cat-dot").attr("r", 4).attr("cx", NODE_W - 2).attr("cy", 2);
+      enter.append("title");
+      enter.on("click", (ev, n) => { ev.stopPropagation(); select(n); });
+      enter.call(d3.drag<SVGGElement, Node>().on("start", () => { layout = "custom"; setLayoutButtons(); }).on("drag", (ev, n) => { n.x = ev.x; n.y = ev.y; render(); }));
+      const all = enter.merge(sel);
+      all.attr("transform", (n) => `translate(${n.x},${n.y})`)
+        .attr("class", (n) => `node impact-${n.impact} ${n.status === "UnEnforced" ? "unenforced" : ""} ${n.status === "Repeal" ? "repeal" : ""} ${visible(n) ? "" : "dim"} ${selected?.id === n.id ? "selected" : ""}`);
+      // タイムラインでは左のレーン見出しが法令名なので、ノードには公布日と改正法名を出す
+      all.select("text").text((n) => (layout === "category" ? n.short : nodeLabel(n)));
+      all.select("circle").attr("fill", (n) => `var(--cat-${n.categorySlugs[0] ?? "other"})`);
+      all.select("title").text((n) => `${n.title}\n${n.amendingLaw ?? n.type}\n公布 ${n.promulgation} / 施行 ${n.enforcement ?? "未定"}`);
+      sel.exit().remove();
+      document.getElementById("map-shown")!.textContent = String(active.filter(visible).length);
+      drawMinimap(d3.zoomTransform(svg.node()!));
+    }
+
+    // ---------------------------------------------------------------- panel
+    const panel = document.getElementById("map-panel")!;
+    function select(n: Node | null) {
+      selected = n;
+      if (!n) { panel.hidden = true; render(); return; }
+      panel.hidden = false;
+      document.getElementById("panel-title")!.textContent = n.title;
+      const badge = (t: string, cls: string) => `<span class="rounded px-1.5 py-0.5 ${cls}">${t}</span>`;
+      const impactCls = { High: "bg-impact-high", Medium: "bg-impact-medium", Low: "bg-impact-low" }[n.impact];
+      document.getElementById("panel-badges")!.innerHTML = [badge(String(n.year), "bg-navy-700"), badge(n.type, "bg-navy-700"), badge(`影響 ${{ High: "大", Medium: "中", Low: "小" }[n.impact]}`, impactCls + " text-white"), badge(({ UnEnforced: "未施行", CurrentEnforced: "施行済", PreviousEnforced: "過去の版", Repeal: "廃止" } as Record<string, string>)[n.status], "border border-navy-700"), ...n.categories.map((c) => badge(c, "border border-navy-700"))].join("");
+      document.getElementById("panel-meta")!.innerHTML = [["改正法", n.amendingLaw ?? "（新規制定・廃止）"], ["公布", n.promulgation], ["施行", n.enforcement ?? "未定"]].map(([k, v]) => `<dt class="text-slate-500">${k}</dt><dd class="text-slate-100">${v}</dd>`).join("");
+      document.getElementById("panel-points")!.innerHTML = n.points.map((p, i) => `<li class="flex gap-2"><span class="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-cyan-600 text-[10px] font-bold">${i + 1}</span><span>${p}</span></li>`).join("");
+      // 系譜は期間に関係なく全履歴を出す。期間外の履歴を選ぶと期間を「すべて」に広げる。
+      const chain = nodes.filter((m) => m.lawId === n.lawId).sort((a, b) => a.promulgation.localeCompare(b.promulgation));
+      document.getElementById("panel-lineage")!.innerHTML = chain.map((m) => `<li class="${m.id === n.id ? "text-cyan-300 font-bold" : activeIds.has(m.id) ? "text-slate-300" : "text-slate-500"}"><button data-id="${m.id}" class="hover:underline">${m.promulgation} ${m.amendingLaw ?? m.type}</button></li>`).join("");
+      document.querySelectorAll<HTMLButtonElement>("#panel-lineage button").forEach((b) => b.addEventListener("click", () => { const m = byId.get(b.dataset.id!); if (m) { ensureActive(m); select(m); focus(m); } }));
+      (document.getElementById("panel-link") as HTMLAnchorElement).href = `/amendments/${n.slug}/`;
+      (document.getElementById("panel-egov") as HTMLAnchorElement).href = `https://laws.e-gov.go.jp/law/${n.lawId}`;
+      render();
+    }
+    document.getElementById("panel-close")!.addEventListener("click", () => select(null));
+    svg.on("click", () => select(null));
+
+    function ensureActive(n: Node) {
+      if (activeIds.has(n.id)) return;
+      yearSel.value = "0";
+      rebuild();
+      relayout();
+    }
+
+    function focus(n: Node) {
+      const box = svg.node()!.getBoundingClientRect();
+      const t = d3.zoomIdentity.translate(box.width / 2 - ((n.x ?? 0) + NODE_W / 2), box.height / 2 - ((n.y ?? 0) + NODE_H / 2));
+      svg.transition().duration(500).call(zoom.transform, t);
+    }
+
+    // --------------------------------------------------------------- minimap
+    const mini = d3.select<SVGSVGElement, unknown>("#minimap");
+    function drawMinimap(t: d3.ZoomTransform) {
+      const W = 176, H = 112;
+      const fullW = LEFT + Math.max(years.length, catOrder.length) * COL_W, fullH = HEIGHT;
+      const s = Math.min(W / fullW, H / fullH);
+      mini.selectAll("*").remove();
+      mini.selectAll("rect.n").data(active).enter().append("rect").attr("x", (n) => (n.x ?? 0) * s).attr("y", (n) => (n.y ?? 0) * s).attr("width", Math.max(2, NODE_W * s)).attr("height", Math.max(1.5, NODE_H * s)).attr("fill", (n) => (visible(n) ? "#64748b" : "#1e293b"));
+      const box = svg.node()?.getBoundingClientRect();
+      if (box) mini.append("rect").attr("x", -t.x / t.k * s).attr("y", -t.y / t.k * s).attr("width", (box.width / t.k) * s).attr("height", (box.height / t.k) * s).attr("fill", "rgba(234,88,12,0.15)").attr("stroke", "#ea580c");
+    }
+
+    // ------------------------------------------------------------- controls
+    function setLayoutButtons() { document.querySelectorAll<HTMLButtonElement>(".layout-btn").forEach((b) => b.classList.toggle("is-on", b.dataset.layout === layout)); }
+    const hints: Record<string, string> = {
+      timeline: "タイムライン: 法令ごとの改正を公布年の列に並べ、同じ法令の履歴を線でつないだレイアウトである。ノードをクリックすると要旨を表示する。",
+      category: "分野: 分野ごとの列に法令を並べる。同じ法令の改正は少しずつ右にずらして重ねる。",
+      custom: "カスタム: ノードをドラッグして自由に配置できる。配置は保存されない。",
+    };
+    const home = () => svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(20, 10).scale(0.85));
+    document.querySelectorAll<HTMLButtonElement>(".layout-btn").forEach((b) => b.addEventListener("click", () => {
+      layout = b.dataset.layout as typeof layout;
+      relayout();
+      setLayoutButtons();
+      document.getElementById("map-hint-text")!.textContent = hints[layout];
+      document.getElementById("map-hint")!.hidden = false;
+      render();
+    }));
+    document.querySelectorAll<HTMLButtonElement>(".cat-toggle").forEach((b) => b.addEventListener("click", () => {
+      const c = b.dataset.cat!;
+      if (activeCats.has(c)) activeCats.delete(c); else activeCats.add(c);
+      b.classList.toggle("is-on", activeCats.has(c));
+      render();
+    }));
+    yearSel.addEventListener("change", () => {
+      rebuild();
+      if (selected && !activeIds.has(selected.id)) select(null);
+      relayout();
+      render();
+      home();
+    });
+    document.getElementById("map-q")!.addEventListener("input", (ev) => { needle = (ev.target as HTMLInputElement).value.trim().toLowerCase(); render(); });
+    document.getElementById("map-hint-close")!.addEventListener("click", () => { document.getElementById("map-hint")!.hidden = true; });
+    document.getElementById("map-reset")!.addEventListener("click", () => { layout = "timeline"; yearSel.value = "3"; rebuild(); layoutTimeline(); setLayoutButtons(); select(null); home(); });
+
+    // ------------------------------------------------------------------ init
+    const wanted = new URLSearchParams(location.search).get("law");
+    if (wanted) yearSel.value = "0";
+    rebuild();
+    layoutTimeline();
+    render();
+    svg.call(zoom.transform, d3.zoomIdentity.translate(20, 10).scale(0.85));
+    if (wanted) {
+      const chain = nodes.filter((n) => n.lawId === wanted).sort((a, b) => b.promulgation.localeCompare(a.promulgation));
+      if (chain[0]) { select(chain[0]); focus(chain[0]); }
     }
   }
 
-  // ------------------------------------------------------------------ svg
-  const svg = d3.select<SVGSVGElement, unknown>("#map");
-  const root = svg.append("g");
-  const gGrid = root.append("g");
-  const gEdges = root.append("g");
-  const gNodes = root.append("g");
-  const zoom = d3.zoom<SVGSVGElement, unknown>().scaleExtent([0.25, 2.5]).on("zoom", (ev) => { root.attr("transform", ev.transform); drawMinimap(ev.transform); });
-  svg.call(zoom);
-
-  let layout: "timeline" | "category" | "custom" = "timeline";
-  let selected: Node | null = null;
-  const hidden = new Set<string>();
-  const activeCats = new Set(catOrder);
-  let needle = "";
-
-  function nodeLabel(n: Node) {
-    const base = n.amendingLaw ? n.amendingLaw.replace(/の一部を改正する法律.*$/, "改正").replace(/の施行に伴う関係法律の整備.*$/, "整備").replace(/に関する法律/g, "法") : n.type;
-    const short = base.length > 11 ? base.slice(0, 10) + "…" : base;
-    return `${n.promulgation.slice(5)} ${short}`;
-  }
-
-  function edgePath(a: Node, b: Node) {
-    const x1 = (a.x ?? 0) + NODE_W, y1 = (a.y ?? 0) + NODE_H / 2, x2 = b.x ?? 0, y2 = (b.y ?? 0) + NODE_H / 2;
-    const dx = Math.max(40, (x2 - x1) / 2);
-    return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
-  }
-
-  function drawGrid() {
-    gGrid.selectAll("*").remove();
-    const cols = layout === "category" ? catOrder.map((c) => ({ x: catX.get(c)!, label: ({ "it-security": "情報セキュリティ・IT", "hr-labor": "人事・労務", "tax-accounting": "税務・会計", "legal-compliance": "企業法務・コンプライアンス", ip: "知財", other: "その他" } as Record<string, string>)[c] })) : years.map((y) => ({ x: yearX.get(y)!, label: String(y) }));
-    for (const c of cols) {
-      gGrid.append("line").attr("class", "year-line").attr("x1", c.x - 15).attr("x2", c.x - 15).attr("y1", 0).attr("y2", HEIGHT);
-      gGrid.append("text").attr("class", "year-label").attr("x", c.x + COL_W / 2 - 15).attr("y", 24).attr("text-anchor", "middle").text(c.label);
-    }
-    if (layout === "timeline") {
-      for (const l of laneLabel) gGrid.append("text").attr("class", "lane-label").attr("x", LEFT - 22).attr("y", l.y).attr("text-anchor", "end").text(l.title);
-    }
-  }
-
-  function visible(n: Node) {
-    if (!activeCats.has(n.categorySlugs[0] ?? "other")) return false;
-    if (!needle) return true;
-    return `${n.title} ${n.amendingLaw ?? ""} ${n.lawId}`.toLowerCase().includes(needle);
-  }
-
-  function render() {
-    drawGrid();
-    const edgeSel = gEdges.selectAll<SVGPathElement, Edge>("path").data(edges, (e) => e.source + ">" + e.target);
-    edgeSel.enter().append("path").attr("class", "edge").merge(edgeSel).attr("d", (e) => edgePath(byId.get(e.source)!, byId.get(e.target)!))
-      .classed("dim", (e) => !(visible(byId.get(e.source)!) && visible(byId.get(e.target)!)))
-      .classed("selected", (e) => !!selected && byId.get(e.source)!.lawId === selected.lawId);
-    edgeSel.exit().remove();
-
-    const sel = gNodes.selectAll<SVGGElement, Node>("g.node").data(nodes, (n) => n.id);
-    const enter = sel.enter().append("g").attr("class", "node");
-    enter.append("rect").attr("width", NODE_W).attr("height", NODE_H);
-    enter.append("text").attr("x", 10).attr("y", NODE_H / 2 + 4);
-    enter.append("circle").attr("class", "cat-dot").attr("r", 4).attr("cx", NODE_W - 2).attr("cy", 2);
-    enter.append("title");
-    enter.on("click", (ev, n) => { ev.stopPropagation(); select(n); });
-    enter.call(d3.drag<SVGGElement, Node>().on("start", () => { layout = "custom"; setLayoutButtons(); }).on("drag", (ev, n) => { n.x = ev.x; n.y = ev.y; render(); }));
-    const all = enter.merge(sel);
-    all.attr("transform", (n) => `translate(${n.x},${n.y})`)
-      .attr("class", (n) => `node impact-${n.impact} ${n.status === "UnEnforced" ? "unenforced" : ""} ${n.status === "Repeal" ? "repeal" : ""} ${visible(n) ? "" : "dim"} ${selected?.id === n.id ? "selected" : ""}`);
-    // タイムラインでは左のレーン見出しが法令名なので、ノードには公布日と改正法名を出す
-    all.select("text").text((n) => (layout === "category" ? n.short : nodeLabel(n)));
-    all.select("circle").attr("fill", (n) => `var(--cat-${n.categorySlugs[0] ?? "other"})`);
-    all.select("title").text((n) => `${n.title}\n${n.amendingLaw ?? n.type}\n公布 ${n.promulgation} / 施行 ${n.enforcement ?? "未定"}`);
-    sel.exit().remove();
-    document.getElementById("map-shown")!.textContent = String(nodes.filter(visible).length);
-    drawMinimap(d3.zoomTransform(svg.node()!));
-  }
-
-  // ---------------------------------------------------------------- panel
-  const panel = document.getElementById("map-panel")!;
-  function select(n: Node | null) {
-    selected = n;
-    if (!n) { panel.hidden = true; render(); return; }
-    panel.hidden = false;
-    document.getElementById("panel-title")!.textContent = n.title;
-    const badge = (t: string, cls: string) => `<span class="rounded px-1.5 py-0.5 ${cls}">${t}</span>`;
-    const impactCls = { High: "bg-impact-high", Medium: "bg-impact-medium", Low: "bg-impact-low" }[n.impact];
-    document.getElementById("panel-badges")!.innerHTML = [badge(String(n.year), "bg-navy-700"), badge(n.type, "bg-navy-700"), badge(`影響 ${{ High: "大", Medium: "中", Low: "小" }[n.impact]}`, impactCls + " text-white"), badge(({ UnEnforced: "未施行", CurrentEnforced: "施行済", PreviousEnforced: "過去の版", Repeal: "廃止" } as Record<string, string>)[n.status], "border border-navy-700"), ...n.categories.map((c) => badge(c, "border border-navy-700"))].join("");
-    document.getElementById("panel-meta")!.innerHTML = [["改正法", n.amendingLaw ?? "（新規制定・廃止）"], ["公布", n.promulgation], ["施行", n.enforcement ?? "未定"]].map(([k, v]) => `<dt class="text-slate-500">${k}</dt><dd class="text-slate-100">${v}</dd>`).join("");
-    document.getElementById("panel-points")!.innerHTML = n.points.map((p, i) => `<li class="flex gap-2"><span class="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-cyan-600 text-[10px] font-bold">${i + 1}</span><span>${p}</span></li>`).join("");
-    const chain = nodes.filter((m) => m.lawId === n.lawId).sort((a, b) => a.promulgation.localeCompare(b.promulgation));
-    document.getElementById("panel-lineage")!.innerHTML = chain.map((m) => `<li class="${m.id === n.id ? "text-cyan-300 font-bold" : "text-slate-300"}"><button data-id="${m.id}" class="hover:underline">${m.promulgation} ${m.amendingLaw ?? m.type}</button></li>`).join("");
-    document.querySelectorAll<HTMLButtonElement>("#panel-lineage button").forEach((b) => b.addEventListener("click", () => { const m = byId.get(b.dataset.id!); if (m) { select(m); focus(m); } }));
-    (document.getElementById("panel-link") as HTMLAnchorElement).href = `/amendments/${n.slug}/`;
-    (document.getElementById("panel-egov") as HTMLAnchorElement).href = `https://laws.e-gov.go.jp/law/${n.lawId}`;
-    render();
-  }
-  document.getElementById("panel-close")!.addEventListener("click", () => select(null));
-  svg.on("click", () => select(null));
-
-  function focus(n: Node) {
-    const box = svg.node()!.getBoundingClientRect();
-    const t = d3.zoomIdentity.translate(box.width / 2 - ((n.x ?? 0) + NODE_W / 2), box.height / 2 - ((n.y ?? 0) + NODE_H / 2));
-    svg.transition().duration(500).call(zoom.transform, t);
-  }
-
-  // --------------------------------------------------------------- minimap
-  const mini = d3.select<SVGSVGElement, unknown>("#minimap");
-  function drawMinimap(t: d3.ZoomTransform) {
-    const W = 176, H = 112;
-    const fullW = LEFT + Math.max(years.length, catOrder.length) * COL_W, fullH = HEIGHT;
-    const s = Math.min(W / fullW, H / fullH);
-    mini.selectAll("*").remove();
-    mini.selectAll("rect.n").data(nodes).enter().append("rect").attr("x", (n) => (n.x ?? 0) * s).attr("y", (n) => (n.y ?? 0) * s).attr("width", Math.max(2, NODE_W * s)).attr("height", Math.max(1.5, NODE_H * s)).attr("fill", (n) => (visible(n) ? "#64748b" : "#1e293b"));
-    const box = svg.node()?.getBoundingClientRect();
-    if (box) mini.append("rect").attr("x", -t.x / t.k * s).attr("y", -t.y / t.k * s).attr("width", (box.width / t.k) * s).attr("height", (box.height / t.k) * s).attr("fill", "rgba(234,88,12,0.15)").attr("stroke", "#ea580c");
-  }
-
-  // ------------------------------------------------------------- controls
-  function setLayoutButtons() { document.querySelectorAll<HTMLButtonElement>(".layout-btn").forEach((b) => b.classList.toggle("is-on", b.dataset.layout === layout)); }
-  const hints: Record<string, string> = {
-    timeline: "タイムライン: 法令ごとの改正を公布年の列に並べ、同じ法令の履歴を線でつないだレイアウトである。ノードをクリックすると要旨を表示する。",
-    category: "分野: 分野ごとの列に法令を並べる。同じ法令の改正は少しずつ右にずらして重ねる。",
-    custom: "カスタム: ノードをドラッグして自由に配置できる。配置は保存されない。",
-  };
-  document.querySelectorAll<HTMLButtonElement>(".layout-btn").forEach((b) => b.addEventListener("click", () => {
-    layout = b.dataset.layout as typeof layout;
-    if (layout === "timeline") layoutTimeline();
-    if (layout === "category") layoutCategory();
-    setLayoutButtons();
-    document.getElementById("map-hint-text")!.textContent = hints[layout];
-    document.getElementById("map-hint")!.hidden = false;
-    render();
-  }));
-  document.querySelectorAll<HTMLButtonElement>(".cat-toggle").forEach((b) => b.addEventListener("click", () => {
-    const c = b.dataset.cat!;
-    if (activeCats.has(c)) activeCats.delete(c); else activeCats.add(c);
-    b.classList.toggle("is-on", activeCats.has(c));
-    render();
-  }));
-  document.getElementById("map-q")!.addEventListener("input", (ev) => { needle = (ev.target as HTMLInputElement).value.trim().toLowerCase(); render(); });
-  document.getElementById("map-hint-close")!.addEventListener("click", () => { document.getElementById("map-hint")!.hidden = true; });
-  document.getElementById("map-reset")!.addEventListener("click", () => { layout = "timeline"; layoutTimeline(); setLayoutButtons(); select(null); svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(20, 10).scale(0.85)); });
-
-  // ------------------------------------------------------------------ init
-  layoutTimeline();
-  render();
-  svg.call(zoom.transform, d3.zoomIdentity.translate(20, 10).scale(0.85));
-  const wanted = new URLSearchParams(location.search).get("law");
-  if (wanted) {
-    const chain = nodes.filter((n) => n.lawId === wanted).sort((a, b) => b.promulgation.localeCompare(a.promulgation));
-    if (chain[0]) { select(chain[0]); focus(chain[0]); }
-  }
-  void hidden;
+  main().catch((err: unknown) => {
+    const el = document.getElementById("map-loading");
+    if (el) el.textContent = `グラフデータを読み込めなかった: ${String(err)}`;
+  });
 </script>
