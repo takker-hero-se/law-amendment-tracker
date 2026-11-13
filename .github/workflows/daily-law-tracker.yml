@@ -26,7 +26,7 @@ concurrency:
 jobs:
   track:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     env:
       # 既定は LLM を使わない template。ANTHROPIC_API_KEY か GEMINI_API_KEY を Secrets に置いたら provider を切り替える。
       LAWTRACK_LLM_PROVIDER: ${{ vars.LAWTRACK_LLM_PROVIDER || 'template' }}
