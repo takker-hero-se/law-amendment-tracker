@@ -70,6 +70,8 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "chore(content): $(date -u +%Y-%m-%d) $(cat pipeline-report.txt)"
+            # 実行中に main へ別のコミット（コード修正など）が入っても、生成物と state を失わずに積む
+            git pull --rebase -q
             git push
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi

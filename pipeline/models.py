@@ -128,13 +128,13 @@ class Summary(BaseModel):
             raise ValueError("promulgation_date must be YYYY-MM-DD")
         return value
 
-    @field_validator("summary_points", "target_audience")
+    @field_validator("summary_points", "target_audience", mode="before")
     @classmethod
-    def _non_blank(cls, value: list[str]) -> list[str]:
-        cleaned = [v.strip() for v in value]
-        if any(not v for v in cleaned):
-            raise ValueError("blank entries are not allowed")
-        return cleaned
+    def _drop_blank(cls, value: object) -> object:
+        """LLM が配列を空文字で水増し（例: 10 要素中 7 個が ""）する事例があるので、空要素を落としてから長さを検証する。"""
+        if not isinstance(value, list):
+            return value
+        return [v.strip() for v in value if isinstance(v, str) and v.strip()]
 
     @field_validator("summary_points")
     @classmethod

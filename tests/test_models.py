@@ -76,6 +76,19 @@ def test_amendment_slug() -> None:
     assert record.slug == "500ac0000000001-20270101-508ac0000000056"
 
 
+def test_blank_list_entries_are_dropped_before_length_check() -> None:
+    """LLM が空文字で配列を水増しする（10 要素中 7 個が空）事例への対処。空要素は落とし、残りで長さを検証する。"""
+    s = Summary.model_validate(valid_summary(summary_points=["定義が変わった", " ", "整備法のため", "", "義務なし", "", "", "", "", ""], target_audience=["事業者", "", "  "]))
+    assert s.summary_points == ["定義が変わった", "整備法のため", "義務なし"]
+    assert s.target_audience == ["事業者"]
+    with pytest.raises(ValidationError, match="at least 3 items"):
+        Summary.model_validate(valid_summary(summary_points=["定義が変わった", "", "整備法のため"]))
+    with pytest.raises(ValidationError, match="at least 1 item"):
+        Summary.model_validate(valid_summary(target_audience=["", " "]))
+    with pytest.raises(ValidationError, match="list"):
+        Summary.model_validate(valid_summary(summary_points="定義が変わった"))
+
+
 def test_summary_points_labels_are_stripped() -> None:
     s = Summary.model_validate(valid_summary(summary_points=["何が: 定義が変わった", "なぜ：整備法のため", "どう変わったか: 義務なし"]))
     assert s.summary_points == ["定義が変わった", "整備法のため", "義務なし"]
