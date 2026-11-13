@@ -14,7 +14,7 @@ MAX_DIFF_CHARS = 60000
 def frontmatter(record: Amendment) -> dict[str, object]:
     ev, sm = record.event, record.summary
     return {
-        "title": sm.law_title,
+        "title": ev.law.law_title,  # 観測事実（e-Gov の法令名）。LLM の law_title は題名には使わない
         "law_id": ev.law.law_id,
         "law_num": sm.law_num,
         "law_type": ev.law.law_type,
