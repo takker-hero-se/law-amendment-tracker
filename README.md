@@ -3,6 +3,7 @@
 日本の法令データの更新差分を自動検知し、LLM で「分野分類」「実務影響度」「3 行要旨」を付けた構造化 Markdown を生成して、
 静的サイト（Astro + Tailwind CSS）として配信するオープンソースの法改正ウォッチである。
 
+- 公開サイト: https://law.quietforensics.com/ （GitHub Pages、毎日 06:00 JST に更新）
 - データ源: [e-Gov 法令検索 法令 API v2](https://laws.e-gov.go.jp/api/2/swagger-ui/)（デジタル庁、認証不要の公開 API）
 - 参考 UI: 法令ごとの改正の系譜を年の列に並べる「法令変遷図」（`/map/`）
 
