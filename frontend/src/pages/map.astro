@@ -43,13 +43,13 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
       <svg id="map" class="h-full w-full cursor-grab active:cursor-grabbing"></svg>
       <div id="map-loading" class="pointer-events-none absolute inset-0 grid place-items-center text-sm text-slate-400">グラフデータを読み込んでいる…</div>
 
-      <div class="pointer-events-none absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-start gap-2 rounded-lg border border-orange-400/60 bg-navy-900/95 px-3 py-2 text-xs text-slate-100 shadow-lg" id="map-hint">
+      <div class="pointer-events-none absolute left-1/2 top-12 z-10 flex -translate-x-1/2 items-start gap-2 rounded-lg border border-orange-400/60 bg-navy-900/95 px-3 py-2 text-xs text-slate-100 shadow-lg" id="map-hint">
         <Info size={14} class="mt-0.5 shrink-0 text-orange-300" />
         <span id="map-hint-text">タイムライン: 法令ごとの改正を公布年の列に並べ、同じ法令の履歴を線でつないだレイアウトである。初期表示は直近 3 年に公布された改正で、「期間」で広げられる。ノードをクリックすると要旨を表示する。</span>
         <button class="pointer-events-auto ml-1 text-slate-400 hover:text-white" id="map-hint-close" aria-label="閉じる"><X size={14} /></button>
       </div>
 
-      <aside id="map-panel" hidden class="absolute right-3 top-3 z-20 flex max-h-[calc(100%-1.5rem)] w-[min(380px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-lg border border-navy-700 bg-navy-900/95 shadow-2xl backdrop-blur">
+      <aside id="map-panel" hidden class="absolute right-3 top-12 z-20 flex max-h-[calc(100%-3.75rem)] w-[min(380px,calc(100%-1.5rem))] flex-col overflow-hidden rounded-lg border border-navy-700 bg-navy-900/95 shadow-2xl backdrop-blur">
         <div class="flex items-start gap-2 border-b border-navy-700 px-4 py-3">
           <div class="min-w-0 flex-1">
             <h2 id="panel-title" class="truncate text-base font-bold"></h2>
@@ -81,7 +81,7 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
       </div>
       <svg id="minimap" class="absolute bottom-3 right-3 z-10 h-28 w-44 rounded-md border border-navy-700 bg-navy-900/90"></svg>
     </div>
-    <div class="border-t border-navy-700 px-3 py-1 text-[11px] text-slate-500">データ更新日: {generated} · 出典: e-Gov 法令 API v2 · 配置は公布年、線は同一法令の連続する履歴</div>
+    <div class="border-t border-navy-700 px-3 py-1 text-[11px] text-slate-500">データ更新日: {generated} · 出典: e-Gov 法令 API v2 · 配置は公布年（改正のない年は省略）、線は同一法令の連続する履歴</div>
   </div>
 </Base>
 
@@ -131,6 +131,12 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
     pointer-events: none;
     font-family: "BIZ UDPGothic", "Noto Sans JP", sans-serif;
   }
+  #map .node text.sub {
+    fill: #bcd3e6;
+    font-size: 8.5px;
+    font-weight: 400;
+    font-family: "JetBrains Mono", "BIZ UDPGothic", monospace;
+  }
   #map .node.dim {
     opacity: 0.12;
   }
@@ -160,13 +166,33 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
     font-weight: 700;
     letter-spacing: 0.05em;
   }
+  #map .year-gap {
+    fill: #64748b;
+    font-size: 13px;
+  }
+  #map .axis-bg {
+    fill: #0b2236;
+    fill-opacity: 0.92;
+  }
+  #map .lane-bg {
+    fill: #0b2236;
+  }
   #map .year-line {
     stroke: #1e3a5f;
     stroke-width: 1;
   }
   #map .lane-label {
-    fill: #64748b;
-    font-size: 10px;
+    fill: #8fa3b8;
+    font-size: 11px;
+  }
+  #map .lane-sep {
+    stroke: #16304d;
+    stroke-width: 1;
+  }
+  #map .group-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
   }
   #map .cat-dot {
     stroke: #0b2236;
@@ -183,13 +209,21 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
     categorySlugs: string[]; points: string[]; amendingLaw: string | null; isLatest: boolean; x?: number; y?: number;
   }
   interface Edge { source: string; target: string }
+  interface Lane { y: number; title: string; group?: string }
 
-  const COL_W = 250, LANE_H = 40, NODE_W = 172, NODE_H = 26, TOP = 50, LEFT = 190;
-  const ROW_H = NODE_H + 8;
+  const NODE_W = 196, NODE_H = 36, ROW_H = NODE_H + 8, LANE_H = NODE_H + 14, GROUP_H = 30, AXIS_H = 40, TOP = AXIS_H + 14, LEFT = 262;
   const catOrder = ["it-security", "hr-labor", "tax-accounting", "legal-compliance", "ip", "other"];
   const catLabel: Record<string, string> = { "it-security": "情報セキュリティ・IT", "hr-labor": "人事・労務", "tax-accounting": "税務・会計", "legal-compliance": "企業法務・コンプライアンス", ip: "知財", other: "その他" };
-  const catX = new Map(catOrder.map((c, i) => [c, LEFT + i * COL_W]));
   const thisYear = new Date().getFullYear();
+
+  function laneTitle(title: string, max = 20): string {
+    const t = title.replace(/に関する法律$/, "法").replace(/の一部を改正する法律$/, "改正法");
+    return t.length > max ? t.slice(0, max - 1) + "…" : t;
+  }
+  function mode(values: string[]): string {
+    const c = d3.rollup(values, (v) => v.length, (v) => v);
+    return [...c.entries()].sort((a, b) => b[1] - a[1] || catOrder.indexOf(a[0]) - catOrder.indexOf(b[0]))[0]?.[0] ?? "other";
+  }
 
   async function main() {
     const res = await fetch("/map/graph.json");
@@ -199,17 +233,23 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
     const nodes = data.nodes;
     const byId = new Map(nodes.map((n) => [n.id, n]));
     const allEdges = data.edges.filter((e) => byId.has(e.source) && byId.has(e.target));
+    // 法令の分野は履歴ごとに LLM が付けるため揺れる。レーンは法令 1 本なので、履歴の最頻値で 1 つに決める。
+    const lawCat = new Map<string, string>();
+    for (const [lawId, list] of d3.group(nodes, (n) => n.lawId)) lawCat.set(lawId, mode(list.map((n) => n.categorySlugs[0] ?? "other")));
 
     // ------------------------------------------------- 期間（公布年）による対象集合
-    // 全履歴は 1,000 件を超えるので、初期表示は直近 3 年に絞り、「期間」セレクタで広げる。?law= 指定時は系譜全体を出す。
+    // 全履歴は 1,800 件を超えるので、初期表示は直近 3 年に絞り、「期間」セレクタで広げる。?law= 指定時は系譜全体を出す。
     const yearSel = document.getElementById("map-years") as HTMLSelectElement;
+    const svgEl = document.getElementById("map") as unknown as SVGSVGElement;
     let active: Node[] = [];
     let edges: Edge[] = [];
     let activeIds = new Set<string>();
     let years: number[] = [];
     let yearX = new Map<number, number>();
+    let COL_W = 250;
+    let catX = new Map<string, number>();
     let laneTop = new Map<string, number>();
-    let laneLabel: { y: number; title: string }[] = [];
+    let lanes: Lane[] = [];
     let HEIGHT = TOP + 60;
 
     function rebuild() {
@@ -218,26 +258,35 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
       active = nodes.filter((n) => n.year >= from);
       activeIds = new Set(active.map((n) => n.id));
       edges = allEdges.filter((e) => activeIds.has(e.source) && activeIds.has(e.target));
-      const ys = active.map((n) => n.year);
-      years = ys.length ? d3.range(Math.min(...ys), Math.max(...ys) + 1) : [thisYear];
+      // 列は改正のある年だけ。列幅は画面幅に合わせて広げる（最小 220、最大 420）。
+      years = [...new Set(active.map((n) => n.year))].sort((a, b) => a - b);
+      if (!years.length) years = [thisYear];
+      const width = svgEl.getBoundingClientRect().width || 1200;
+      COL_W = Math.max(220, Math.min(420, Math.floor((width - LEFT - 30) / years.length)));
       yearX = new Map(years.map((y, i) => [y, LEFT + i * COL_W]));
-      // 法令ごとのレーン（分野 → 法令名順）。同じ年に複数の改正がある法令はレーンを縦に広げて重ねない。
-      const lawsByCat = d3.group(active, (n) => n.categorySlugs[0] ?? "other");
+      const colCat = Math.max(230, Math.floor((width - LEFT - 30) / catOrder.length));
+      catX = new Map(catOrder.map((c, i) => [c, LEFT + i * colCat]));
+      // 法令ごとのレーン（分野見出し → 法令名順）。同じ年に複数の改正がある法令はレーンを縦に広げて重ねない。
+      const lawsByCat = d3.group([...new Map(active.map((n) => [n.lawId, n])).values()], (n) => lawCat.get(n.lawId) ?? "other");
       laneTop = new Map();
-      laneLabel = [];
+      lanes = [];
       let cursorY = TOP;
       for (const c of catOrder) {
-        const list = [...new Map((lawsByCat.get(c) ?? []).map((n) => [n.lawId, n])).values()].sort((a, b) => a.title.localeCompare(b.title, "ja"));
+        const list = (lawsByCat.get(c) ?? []).sort((a, b) => a.title.localeCompare(b.title, "ja"));
+        if (!list.length) continue;
+        lanes.push({ y: cursorY + 18, title: catLabel[c], group: c });
+        cursorY += GROUP_H;
         for (const n of list) {
           const perYear = d3.rollup(active.filter((m) => m.lawId === n.lawId), (v) => v.length, (m) => m.year);
           const rows = Math.max(1, ...perYear.values());
           laneTop.set(n.lawId, cursorY);
-          laneLabel.push({ y: cursorY + NODE_H / 2 + 3, title: n.short });
-          cursorY += Math.max(LANE_H, rows * ROW_H + 8);
+          lanes.push({ y: cursorY + NODE_H / 2 + 4, title: laneTitle(n.title) });
+          cursorY += Math.max(LANE_H, rows * ROW_H + 6);
         }
+        cursorY += 8;
       }
       HEIGHT = cursorY + 60;
-      document.getElementById("map-laws")!.textContent = String(new Set(active.map((n) => n.lawId)).size);
+      document.getElementById("map-laws")!.textContent = String(laneTop.size);
     }
 
     function layoutTimeline() {
@@ -246,7 +295,7 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
         const key = `${n.lawId}:${n.year}`;
         const k = perCell.get(key) ?? 0; perCell.set(key, k + 1);
         const month = Number(n.promulgation.slice(5, 7)) - 1;
-        n.x = (yearX.get(n.year) ?? LEFT) + 10 + Math.min(month * 4, 44);
+        n.x = (yearX.get(n.year) ?? LEFT) + 6 + Math.round((month / 11) * Math.max(0, COL_W - NODE_W - 24));
         n.y = (laneTop.get(n.lawId) ?? TOP) + k * ROW_H;
       }
     }
@@ -256,7 +305,7 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
       const lawY = new Map<string, number>();
       const seen = new Map<string, number>();
       for (const n of active.sort((a, b) => a.lawId.localeCompare(b.lawId) || a.promulgation.localeCompare(b.promulgation))) {
-        const c = n.categorySlugs[0] ?? "other";
+        const c = lawCat.get(n.lawId) ?? "other";
         if (!lawY.has(n.lawId)) {
           lawY.set(n.lawId, nextY.get(c) ?? TOP);
           nextY.set(c, (nextY.get(c) ?? TOP) + LANE_H);
@@ -277,7 +326,12 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
     const gGrid = root.append("g");
     const gEdges = root.append("g");
     const gNodes = root.append("g");
-    const zoom = d3.zoom<SVGSVGElement, unknown>().scaleExtent([0.25, 2.5]).on("zoom", (ev) => { root.attr("transform", ev.transform); drawMinimap(ev.transform); });
+    // 年の見出しは縦スクロールしても見えるように、root とは別のグループに置き x 方向だけ追従させる
+    // レーン見出し（法令名・分野）は横スクロールしても見えるように左に固定し、y 方向と拡大率だけ追従させる
+    const gLane = svg.append("g").attr("class", "lanes");
+    const gAxis = svg.append("g").attr("class", "axis");
+    let transform = d3.zoomIdentity.translate(20, 10).scale(0.85);
+    const zoom = d3.zoom<SVGSVGElement, unknown>().scaleExtent([0.25, 2.5]).on("zoom", (ev) => { transform = ev.transform; root.attr("transform", ev.transform); drawLanes(); drawAxis(); drawMinimap(ev.transform); });
     svg.call(zoom);
 
     let layout: "timeline" | "category" | "custom" = "timeline";
@@ -287,30 +341,73 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
 
     function nodeLabel(n: Node) {
       const base = n.amendingLaw ? n.amendingLaw.replace(/の一部を改正する法律.*$/, "改正").replace(/の施行に伴う関係法律の整備.*$/, "整備").replace(/に関する法律/g, "法") : n.type;
-      const short = base.length > 11 ? base.slice(0, 10) + "…" : base;
-      return `${n.promulgation.slice(5)} ${short}`;
+      return base.length > 15 ? base.slice(0, 14) + "…" : base;
+    }
+    // 段階施行で同じ改正法の履歴が同じ年に複数並ぶので、2 行目に公布日と施行日を出して見分けられるようにする
+    function nodeSub(n: Node) {
+      return `公布 ${n.promulgation.slice(2)} → 施行 ${n.enforcement ? n.enforcement.slice(2) : "未定"}`;
     }
 
     function edgePath(a: Node, b: Node) {
       const x1 = (a.x ?? 0) + NODE_W, y1 = (a.y ?? 0) + NODE_H / 2, x2 = b.x ?? 0, y2 = (b.y ?? 0) + NODE_H / 2;
+      if (x2 < x1 + 20) {
+        // 同じ列で縦に並ぶ履歴は右側で短く折り返す
+        const xo = Math.max(x1, (b.x ?? 0) + NODE_W) + 14;
+        return `M${x1},${y1} C${xo},${y1} ${xo},${y2} ${x2 + NODE_W},${y2}`;
+      }
       const dx = Math.max(40, (x2 - x1) / 2);
       return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
     }
 
+    function columns() {
+      return layout === "category" ? catOrder.map((c) => ({ x: catX.get(c)!, w: (catX.get(catOrder[1]) ?? 0) - (catX.get(catOrder[0]) ?? 0), label: catLabel[c], gap: false }))
+        : years.map((y, i) => ({ x: yearX.get(y)!, w: COL_W, label: String(y), gap: i > 0 && y - years[i - 1] > 1 }));
+    }
+
     function drawGrid() {
       gGrid.selectAll("*").remove();
-      const cols = layout === "category" ? catOrder.map((c) => ({ x: catX.get(c)!, label: catLabel[c] })) : years.map((y) => ({ x: yearX.get(y)!, label: String(y) }));
-      for (const c of cols) {
-        gGrid.append("line").attr("class", "year-line").attr("x1", c.x - 15).attr("x2", c.x - 15).attr("y1", 0).attr("y2", HEIGHT);
-        gGrid.append("text").attr("class", "year-label").attr("x", c.x + COL_W / 2 - 15).attr("y", 24).attr("text-anchor", "middle").text(c.label);
+      for (const c of columns()) {
+        gGrid.append("line").attr("class", "year-line").attr("x1", c.x - 12).attr("x2", c.x - 12).attr("y1", AXIS_H).attr("y2", HEIGHT);
       }
       if (layout === "timeline") {
-        for (const l of laneLabel) gGrid.append("text").attr("class", "lane-label").attr("x", LEFT - 22).attr("y", l.y).attr("text-anchor", "end").text(l.title);
+        for (const l of lanes) {
+          if (l.group) gGrid.append("line").attr("class", "lane-sep").attr("x1", 8).attr("x2", LEFT + years.length * COL_W).attr("y1", l.y - 20).attr("y2", l.y - 20);
+        }
+      }
+    }
+
+    function drawLanes() {
+      gLane.selectAll("*").remove();
+      if (layout !== "timeline") return;
+      const box = svgEl.getBoundingClientRect();
+      const k = transform.k, ty = transform.y;
+      gLane.attr("transform", `translate(0,${ty}) scale(${k})`);
+      gLane.append("rect").attr("class", "lane-bg").attr("x", 0).attr("y", -ty / k).attr("width", LEFT - 14).attr("height", box.height / k);
+      for (const l of lanes) {
+        const sy = ty + l.y * k;
+        if (sy < AXIS_H - 10 || sy > box.height + 10) continue;
+        if (l.group) gLane.append("text").attr("class", "group-label").attr("fill", `var(--cat-${l.group})`).attr("x", 12).attr("y", l.y).text(l.title);
+        else gLane.append("text").attr("class", "lane-label").attr("x", LEFT - 20).attr("y", l.y).attr("text-anchor", "end").text(l.title);
+      }
+    }
+
+    function drawAxis() {
+      gAxis.selectAll("*").remove();
+      const box = svgEl.getBoundingClientRect();
+      gAxis.append("rect").attr("class", "axis-bg").attr("x", 0).attr("y", 0).attr("width", box.width).attr("height", AXIS_H);
+      const k = transform.k, tx = transform.x;
+      for (const c of columns()) {
+        const x = tx + (c.x - 12) * k;
+        const w = c.w * k;
+        if (x + w < 0 || x > box.width) continue;
+        gAxis.append("line").attr("class", "year-line").attr("x1", x).attr("x2", x).attr("y1", 0).attr("y2", AXIS_H);
+        gAxis.append("text").attr("class", "year-label").attr("x", x + w / 2).attr("y", 26).attr("text-anchor", "middle").text(c.label);
+        if (c.gap) gAxis.append("text").attr("class", "year-gap").attr("x", x - 2).attr("y", 26).attr("text-anchor", "end").text("⋯");
       }
     }
 
     function visible(n: Node) {
-      if (!activeCats.has(n.categorySlugs[0] ?? "other")) return false;
+      if (!activeCats.has(lawCat.get(n.lawId) ?? "other")) return false;
       if (!needle) return true;
       return `${n.title} ${n.amendingLaw ?? ""} ${n.lawId}`.toLowerCase().includes(needle);
     }
@@ -326,7 +423,8 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
       const sel = gNodes.selectAll<SVGGElement, Node>("g.node").data(active, (n) => n.id);
       const enter = sel.enter().append("g").attr("class", "node");
       enter.append("rect").attr("width", NODE_W).attr("height", NODE_H);
-      enter.append("text").attr("x", 10).attr("y", NODE_H / 2 + 4);
+      enter.append("text").attr("class", "main").attr("x", 10).attr("y", 15);
+      enter.append("text").attr("class", "sub").attr("x", 10).attr("y", 29);
       enter.append("circle").attr("class", "cat-dot").attr("r", 4).attr("cx", NODE_W - 2).attr("cy", 2);
       enter.append("title");
       enter.on("click", (ev, n) => { ev.stopPropagation(); select(n); });
@@ -334,13 +432,16 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
       const all = enter.merge(sel);
       all.attr("transform", (n) => `translate(${n.x},${n.y})`)
         .attr("class", (n) => `node impact-${n.impact} ${n.status === "UnEnforced" ? "unenforced" : ""} ${n.status === "Repeal" ? "repeal" : ""} ${visible(n) ? "" : "dim"} ${selected?.id === n.id ? "selected" : ""}`);
-      // タイムラインでは左のレーン見出しが法令名なので、ノードには公布日と改正法名を出す
-      all.select("text").text((n) => (layout === "category" ? n.short : nodeLabel(n)));
-      all.select("circle").attr("fill", (n) => `var(--cat-${n.categorySlugs[0] ?? "other"})`);
+      // タイムラインでは左のレーン見出しが法令名なので、ノードには改正法名を出す。分野レイアウトでは法令名。
+      all.select("text.main").text((n) => (layout === "category" ? n.short : nodeLabel(n)));
+      all.select("text.sub").text(nodeSub);
+      all.select("circle").attr("fill", (n) => `var(--cat-${lawCat.get(n.lawId) ?? "other"})`);
       all.select("title").text((n) => `${n.title}\n${n.amendingLaw ?? n.type}\n公布 ${n.promulgation} / 施行 ${n.enforcement ?? "未定"}`);
       sel.exit().remove();
       document.getElementById("map-shown")!.textContent = String(active.filter(visible).length);
-      drawMinimap(d3.zoomTransform(svg.node()!));
+      drawLanes();
+      drawAxis();
+      drawMinimap(transform);
     }
 
     // ---------------------------------------------------------------- panel
@@ -356,8 +457,8 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
       document.getElementById("panel-meta")!.innerHTML = [["改正法", n.amendingLaw ?? "（新規制定・廃止）"], ["公布", n.promulgation], ["施行", n.enforcement ?? "未定"]].map(([k, v]) => `<dt class="text-slate-500">${k}</dt><dd class="text-slate-100">${v}</dd>`).join("");
       document.getElementById("panel-points")!.innerHTML = n.points.map((p, i) => `<li class="flex gap-2"><span class="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-cyan-600 text-[10px] font-bold">${i + 1}</span><span>${p}</span></li>`).join("");
       // 系譜は期間に関係なく全履歴を出す。期間外の履歴を選ぶと期間を「すべて」に広げる。
-      const chain = nodes.filter((m) => m.lawId === n.lawId).sort((a, b) => a.promulgation.localeCompare(b.promulgation));
-      document.getElementById("panel-lineage")!.innerHTML = chain.map((m) => `<li class="${m.id === n.id ? "text-cyan-300 font-bold" : activeIds.has(m.id) ? "text-slate-300" : "text-slate-500"}"><button data-id="${m.id}" class="hover:underline">${m.promulgation} ${m.amendingLaw ?? m.type}</button></li>`).join("");
+      const chain = nodes.filter((m) => m.lawId === n.lawId).sort((a, b) => a.promulgation.localeCompare(b.promulgation) || (a.enforcement ?? "").localeCompare(b.enforcement ?? ""));
+      document.getElementById("panel-lineage")!.innerHTML = chain.map((m) => `<li class="${m.id === n.id ? "text-cyan-300 font-bold" : activeIds.has(m.id) ? "text-slate-300" : "text-slate-500"}"><button data-id="${m.id}" class="text-left hover:underline">${m.promulgation} ${m.amendingLaw ?? m.type}<span class="ml-1 text-slate-500">施行 ${m.enforcement ?? "未定"}</span></button></li>`).join("");
       document.querySelectorAll<HTMLButtonElement>("#panel-lineage button").forEach((b) => b.addEventListener("click", () => { const m = byId.get(b.dataset.id!); if (m) { ensureActive(m); select(m); focus(m); } }));
       (document.getElementById("panel-link") as HTMLAnchorElement).href = `/amendments/${n.slug}/`;
       (document.getElementById("panel-egov") as HTMLAnchorElement).href = `https://laws.e-gov.go.jp/law/${n.lawId}`;
@@ -374,8 +475,9 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
     }
 
     function focus(n: Node) {
-      const box = svg.node()!.getBoundingClientRect();
-      const t = d3.zoomIdentity.translate(box.width / 2 - ((n.x ?? 0) + NODE_W / 2), box.height / 2 - ((n.y ?? 0) + NODE_H / 2));
+      const box = svgEl.getBoundingClientRect();
+      const k = Math.max(transform.k, 0.85);
+      const t = d3.zoomIdentity.translate(box.width / 2 - ((n.x ?? 0) + NODE_W / 2) * k, box.height / 2 - ((n.y ?? 0) + NODE_H / 2) * k).scale(k);
       svg.transition().duration(500).call(zoom.transform, t);
     }
 
@@ -383,12 +485,12 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
     const mini = d3.select<SVGSVGElement, unknown>("#minimap");
     function drawMinimap(t: d3.ZoomTransform) {
       const W = 176, H = 112;
-      const fullW = LEFT + Math.max(years.length, catOrder.length) * COL_W, fullH = HEIGHT;
+      const fullW = LEFT + Math.max(years.length * COL_W, catOrder.length * ((catX.get(catOrder[1]) ?? 0) - (catX.get(catOrder[0]) ?? 0))), fullH = HEIGHT;
       const s = Math.min(W / fullW, H / fullH);
       mini.selectAll("*").remove();
       mini.selectAll("rect.n").data(active).enter().append("rect").attr("x", (n) => (n.x ?? 0) * s).attr("y", (n) => (n.y ?? 0) * s).attr("width", Math.max(2, NODE_W * s)).attr("height", Math.max(1.5, NODE_H * s)).attr("fill", (n) => (visible(n) ? "#64748b" : "#1e293b"));
-      const box = svg.node()?.getBoundingClientRect();
-      if (box) mini.append("rect").attr("x", -t.x / t.k * s).attr("y", -t.y / t.k * s).attr("width", (box.width / t.k) * s).attr("height", (box.height / t.k) * s).attr("fill", "rgba(234,88,12,0.15)").attr("stroke", "#ea580c");
+      const box = svgEl.getBoundingClientRect();
+      mini.append("rect").attr("x", -t.x / t.k * s).attr("y", -t.y / t.k * s).attr("width", (box.width / t.k) * s).attr("height", (box.height / t.k) * s).attr("fill", "rgba(234,88,12,0.15)").attr("stroke", "#ea580c");
     }
 
     // ------------------------------------------------------------- controls
@@ -398,7 +500,15 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
       category: "分野: 分野ごとの列に法令を並べる。同じ法令の改正は少しずつ右にずらして重ねる。",
       custom: "カスタム: ノードをドラッグして自由に配置できる。配置は保存されない。",
     };
-    const home = () => svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(20, 10).scale(0.85));
+    // 初期位置。列が画面に収まらないときは最新の年が右端に来るようにずらす（古い年は左へパンで見る）。
+    function homeTransform() {
+      const k = 0.85;
+      const width = svgEl.getBoundingClientRect().width || 1200;
+      const full = (LEFT + years.length * COL_W + 20) * k;
+      const tx = layout === "timeline" && full > width ? width - full : 10;
+      return d3.zoomIdentity.translate(tx, 0).scale(k);
+    }
+    const home = () => svg.transition().duration(400).call(zoom.transform, homeTransform());
     document.querySelectorAll<HTMLButtonElement>(".layout-btn").forEach((b) => b.addEventListener("click", () => {
       layout = b.dataset.layout as typeof layout;
       relayout();
@@ -423,6 +533,7 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
     document.getElementById("map-q")!.addEventListener("input", (ev) => { needle = (ev.target as HTMLInputElement).value.trim().toLowerCase(); render(); });
     document.getElementById("map-hint-close")!.addEventListener("click", () => { document.getElementById("map-hint")!.hidden = true; });
     document.getElementById("map-reset")!.addEventListener("click", () => { layout = "timeline"; yearSel.value = "3"; rebuild(); layoutTimeline(); setLayoutButtons(); select(null); home(); });
+    window.addEventListener("resize", () => { rebuild(); relayout(); render(); });
 
     // ------------------------------------------------------------------ init
     const wanted = new URLSearchParams(location.search).get("law");
@@ -430,8 +541,9 @@ const generated = entries.map((e) => e.data.generated_at).sort().at(-1)?.slice(0
     rebuild();
     layoutTimeline();
     render();
-    svg.call(zoom.transform, d3.zoomIdentity.translate(20, 10).scale(0.85));
+    svg.call(zoom.transform, homeTransform());
     if (wanted) {
+      document.getElementById("map-hint")!.hidden = true;
       const chain = nodes.filter((n) => n.lawId === wanted).sort((a, b) => b.promulgation.localeCompare(a.promulgation));
       if (chain[0]) { select(chain[0]); focus(chain[0]); }
     }
