@@ -69,7 +69,7 @@ houritsu（Kohei-Wada/houritsu）は 1 改正法の施行 = 1 コミットで履
 ## フロントエンド
 
 - Astro 5（Content Collections, `glob` loader）+ Tailwind CSS 4（`@tailwindcss/vite`）+ lucide-astro + d3。
-- 配色は navy + cyan、本文は BIZ UDPGothic。変遷図のページだけダーク背景。
+- 配色は navy + cyan、本文は BIZ UDPGothic。変遷図も同じ白地の配色で、分野色だけ白地で読める濃さにしている（2026-11-15 にダーク背景を廃止）。
 - `/map/` は MBSD のランサムウェア変遷図を参考に、年の列・系譜の線・クリックで詳細パネル・検索・レイアウト切替（タイムライン / 分野 / カスタム）・ミニマップを持つ。
   ノード = 改正履歴、線 = 同一法令の連続する履歴。枠線の色が影響度、塗りが施行状態、右上の点が分野。
 - 件数対策（2026-11-14、全履歴取り込みに備えて）。644 件時点でトップの index.html が 3.0MB（カード 1 件 約 4.7KB）、変遷図の HTML が 882KB になった。
