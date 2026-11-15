@@ -77,6 +77,13 @@ houritsu（Kohei-Wada/houritsu）は 1 改正法の施行 = 1 コミットで履
   - 変遷図のグラフは `/map/graph.json`（gzip 149KB）に分離して fetch する。「期間」セレクタ（直近 3/5/10 年・すべて）で公布年による対象集合を切り替え、レーン・列・エッジを対象集合から再計算する。初期は直近 3 年、`?law=` 指定時は系譜全体。系譜パネルで期間外の履歴を選ぶと自動で「すべて」に広げる。
   - レイアウト改善（2026-11-15、ユーザー指摘）。レーンは法令 1 本（分野は履歴ごとの LLM 判定が揺れるので最頻値で決める。以前は分野ごとに重複登録され空レーンが残った）。列は改正のある年だけ置き（空白年は「⋯」で省略）、列幅は画面幅に合わせて 220〜420px。ノードは 2 行（改正法名 / 公布日 → 施行日）で段階施行を見分ける。分野の見出し行、年の見出しは縦スクロールに追従（固定）、列が画面に収まらないときは最新年を右端に置く初期位置。
 
+## MCP サーバ（`catalog.py` / `mcp_server.py`）
+
+- 公開済み記事を MCP ツールとして出す。ロジックは `LawTrackTools`（素のクラス）に置き、`MCPServer` への登録は `build_server()` の数行だけにする（webdiag / triage と同じ流儀）。
+- データ源は `Catalog` プロトコルで差し替える。`LocalCatalog` は `frontend/src/content/amendments/*.md` を読み、`RemoteCatalog` はサイトの `/api/amendments.json`（本文なしの索引）と GitHub raw の Markdown を読む。索引はプロセス内でキャッシュし、本文は要求時に 1 件ずつ取る。
+- `get_amendment` は観測事実（`facts`: 法令名・番号・日付・施行状態・改正法）と LLM の推定（`llm_estimate`: 分野・影響度・対象・要旨・本文）を別キーで返し、全応答に免責文を付ける。条文差分（最大 6 万字）は `include_diff=true` のときだけ本文に含める。
+- 索引の項目は Python 側 `AmendmentRecord` と Astro 側 `api/amendments.json.ts` で同じに保つ（frontmatter + `slug` + `url`）。片方を変えたらもう片方も変える。
+
 ## 今後の拡張点
 
 - 改正法 ID からの逆引き（`amendment_law_id`）で「この改正法が触った法令一覧」ページを作る。

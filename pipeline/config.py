@@ -84,6 +84,9 @@ class Settings:
     issues_api_base: str = "https://api.github.com"
     issues_interval_sec: float = 1.0
     site_url: str = ""
+    # MCP サーバのデータ源: "local"（リポジトリ内 Markdown）か公開サイトの URL
+    mcp_source: str = "local"
+    mcp_raw_base: str = "https://raw.githubusercontent.com/takker-hero-se/law-amendment-tracker/main/frontend/src/content/amendments"
 
     def __post_init__(self) -> None:
         if self.llm_provider not in PROVIDERS:
@@ -102,6 +105,8 @@ class Settings:
             raise ValueError("LAWTRACK_ISSUES_REPO requires LAWTRACK_ISSUES_TOKEN or GITHUB_TOKEN")
         if self.issues_interval_sec < 0:
             raise ValueError("LAWTRACK_ISSUES_INTERVAL_SEC must be >= 0")
+        if self.mcp_source != "local" and not self.mcp_source.startswith(("http://", "https://")):
+            raise ValueError("LAWTRACK_MCP_SOURCE must be 'local' or an http(s) URL")
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -129,4 +134,6 @@ class Settings:
             issues_api_base=_env("LAWTRACK_ISSUES_API_BASE", "https://api.github.com").rstrip("/"),
             issues_interval_sec=_env_float("LAWTRACK_ISSUES_INTERVAL_SEC", 1.0),
             site_url=_env("SITE_URL", "").rstrip("/"),
+            mcp_source=_env("LAWTRACK_MCP_SOURCE", "local").rstrip("/"),
+            mcp_raw_base=_env("LAWTRACK_MCP_RAW_BASE", cls.mcp_raw_base).rstrip("/"),
         )

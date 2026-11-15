@@ -23,6 +23,7 @@ e-Gov API ──▶ fetcher ──▶ filter ──▶ summarizer ──▶ gene
 | `/timeline/` | 施行日タイムライン（これから施行される改正を先頭に） |
 | `/map/` | 法令変遷図。公布年の列にノードを置き、同一法令の履歴を線でつなぐ。期間（初期は直近 3 年）・検索・分野フィルタ・ドラッグ配置。データは `/map/graph.json` |
 | `/rss.xml` `/feed.json` `/category/<slug>/rss.xml` | RSS 2.0 / JSON Feed 1.1（全体・分野別） |
+| `/api/amendments.json` | 全記事の索引（本文なし）。MCP サーバのリモートデータ源 |
 
 ## 仕組み
 
@@ -83,6 +84,29 @@ cd frontend; npm run build; npm run preview
 cd frontend; npx astro check; npm run build
 ```
 
+## MCP サーバ
+
+`python -m pipeline.mcp_server`（stdio）。MCP クライアント（Claude Desktop / Claude Code など）から改正記事を検索・参照できる。
+ツールは `search_amendments`（絞り込み検索）、`get_amendment`（1 件の詳細。e-Gov の観測事実 `facts` と LLM の推定 `llm_estimate` を分けて返す）、
+`list_upcoming`（施行予定）、`law_lineage`（同一法令の系譜）、`list_laws` / `list_categories`（収録範囲）。応答には免責を必ず付ける。
+ロジックは `pipeline/catalog.py`（読み取り・問い合わせ）と `pipeline/mcp_server.py` の `LawTrackTools`。
+
+データ源は `LAWTRACK_MCP_SOURCE` で選ぶ。`local`（既定）はリポジトリ内の Markdown を読む。サイト URL（`https://law.quietforensics.com`）を置くと
+公開索引 `/api/amendments.json` と GitHub raw の Markdown を読むので、クローンせずに使える。
+
+```json
+{
+  "mcpServers": {
+    "law-amendment-tracker": {
+      "command": "C:/Users/<you>/venvs/leagal-biz/Scripts/python.exe",
+      "args": ["-m", "pipeline.mcp_server"],
+      "cwd": "<repo>",
+      "env": { "LAWTRACK_MCP_SOURCE": "https://law.quietforensics.com" }
+    }
+  }
+}
+```
+
 ## 自動運用（GitHub Actions）
 
 - `.github/workflows/daily-law-tracker.yml` 毎日 06:00 JST に差分取得 → 要約 → `frontend/src/content` と `data/state.json` をコミット → ビルド → デプロイ。
@@ -107,6 +131,8 @@ pipeline/        差分検知・ノイズ除去・LLM 要約・Markdown 生成�
   generator.py   frontmatter 付き Markdown
   tickets.py     GitHub Issue（チケット）の起票・更新
   tickets_backfill.py  既存記事の一括起票 CLI
+  catalog.py     公開済み記事の読み取り（ローカル Markdown / 公開索引）と問い合わせ
+  mcp_server.py  MCP サーバ（stdio）
   run.py         CLI
 tests/           pytest（FakeEgov で API を模擬）
 data/            watchlist.json（監視対象）、state.json（スナップショット・処理済み履歴）
